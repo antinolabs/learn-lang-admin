@@ -20,7 +20,7 @@ const CourseDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [generatingModules, setGeneratingModules] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState('beginner');
-  const [loadingModules, setLoadingModules] = useState(false); // used internally for fetch
+  
 
   useEffect(() => {
     if (courseId) {
@@ -108,7 +108,6 @@ const CourseDetail: React.FC = () => {
   const loadModulesForCourse = async () => {
     if (!courseId) return;
     try {
-      setLoadingModules(true);
       const res = await moduleApi.getAllModules();
       if (res.success) {
         setModules(res.data.filter((m) => m.courseId === courseId));
@@ -119,7 +118,6 @@ const CourseDetail: React.FC = () => {
       console.error('Error loading modules:', e);
       setModules([]);
     } finally {
-      setLoadingModules(false);
     }
   };
 
