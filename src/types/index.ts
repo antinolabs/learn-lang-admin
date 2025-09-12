@@ -54,6 +54,7 @@ export interface Flashcard {
   bufferId?: string;
   createdAt: string;
   updatedAt: string;
+  raw?: any;
 }
 
 export interface GenerateModulesRequest {

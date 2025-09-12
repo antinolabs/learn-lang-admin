@@ -21,6 +21,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Allow very long-running AI operations without client-side timeout
+  timeout: 600000, // 10 minutes
 });
 
 // Course API
@@ -228,8 +230,71 @@ export const lessonApi = {
 export const flashcardApi = {
   // Generate flashcards for a lesson
   generateFlashcards: async (data: GenerateFlashcardsRequest): Promise<ApiResponse<Flashcard[]>> => {
-    const response = await api.post('/ai/preview/lesson', data);
-    return response.data;
+    const response = await api.post('/ai/preview/flash-card', data);
+    const raw: any = response.data || {};
+    const preview = raw.payload?.preview || {};
+    const bufferId: string | undefined = raw.payload?.bufferId;
+    const list: any[] = Array.isArray(preview.flashcards) ? preview.flashcards : [];
+    const mapped: Flashcard[] = list.map((fc: any, idx: number) => {
+      const isMcq = (fc.answer_type === 'mcq') && fc.content_data?.answer;
+      const options: string[] = isMcq ? (fc.content_data?.answer?.options || []) : [];
+      const correct: string | undefined = isMcq ? fc.content_data?.answer?.correct : undefined;
+      const backText = isMcq
+        ? `Options: ${options.join(', ')}${correct ? ` | Correct: ${correct}` : ''}`
+        : (fc.content_data?.subtext || '');
+      const difficulty: 'easy' | 'medium' | 'hard' = 'medium';
+      return {
+        id: fc._id || String(idx),
+        lessonId: fc.lesson_id || '',
+        front: fc.prompt || '',
+        back: backText,
+        difficulty,
+        status: 'pending',
+        bufferId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        raw: fc,
+      } as Flashcard;
+    });
+    return { success: !!raw.success, data: mapped, message: raw.message } as any;
+  },
+
+  // Fetch AI draft flashcards (external drafts endpoint)
+  getDrafts: async (): Promise<ApiResponse<Flashcard[]>> => {
+    // Call absolute URL to ensure using the correct port as requested
+    const response = await axios.get('http://localhost:3001/api/ai/drafts', {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 600000
+    });
+    const raw: any = response.data || {};
+    // Shape: { success, payload: { drafts: [ { buffer_id, lesson_id, flashcards: [...] }, ... ] } }
+    const draftsContainer: any[] = raw?.payload?.drafts || raw?.drafts || [];
+    // Flatten all flashcards from all drafts
+    const flatFlashcards: any[] = draftsContainer.flatMap((d: any) => {
+      const list = Array.isArray(d?.flashcards) ? d.flashcards : [];
+      return list.map((fc: any) => ({ ...fc, _buffer_id: d?.buffer_id || d?.bufferId }));
+    });
+    const mapped: Flashcard[] = flatFlashcards.map((fc: any, idx: number) => {
+      const isMcq = (fc.answer_type === 'mcq') && fc.content_data?.answer;
+      const options: string[] = isMcq ? (fc.content_data?.answer?.options || []) : [];
+      const correct: string | undefined = isMcq ? fc.content_data?.answer?.correct : undefined;
+      const backText = isMcq
+        ? `Options: ${options.join(', ')}${correct ? ` | Correct: ${correct}` : ''}`
+        : (fc.content_data?.subtext || '');
+      return {
+        id: fc._id || String(idx),
+        lessonId: fc.lesson_id || '',
+        front: fc.prompt || '',
+        back: backText,
+        difficulty: 'medium',
+        status: 'pending',
+        bufferId: fc._buffer_id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        raw: fc,
+      } as Flashcard;
+    });
+    return { success: !!raw.success, data: mapped, message: raw.message } as any;
   },
 
   // Approve flashcards

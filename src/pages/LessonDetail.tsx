@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   BookOpen, 
@@ -20,11 +20,19 @@ const LessonDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [generatingFlashcards, setGeneratingFlashcards] = useState(false);
   const [previewingFlashcards, setPreviewingFlashcards] = useState(false);
-  const [flashcardCount, setFlashcardCount] = useState(20);
+  const [flashcardCount, setFlashcardCount] = useState(22);
   const [currentBufferId, setCurrentBufferId] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  // Guards to prevent repeated calls (e.g., React StrictMode double invoke or rapid clicks)
+  const previewRequestedForLessonRef = useRef<string | null>(null);
+  const generateRequestedForLessonRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (lessonId) {
+      // Reset guards when lesson changes
+      previewRequestedForLessonRef.current = null;
+      generateRequestedForLessonRef.current = null;
       loadLessonData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -36,21 +44,21 @@ const LessonDetail: React.FC = () => {
       setError(null);
       
       // Load lesson data
-      const lessonResponse = await lessonApi.getLesson(lessonId!);
-      if (lessonResponse.success) {
-        setLesson(lessonResponse.data);
-      } else {
-        setError(lessonResponse.message || 'Failed to load lesson');
-        return;
+      try {
+        const lessonResponse = await lessonApi.getLesson(lessonId!);
+        if (lessonResponse.success) {
+          setLesson(lessonResponse.data);
+        } else {
+          // Fallback: create a minimal lesson shell so we can still preview flashcards
+          setLesson({ id: lessonId!, moduleId: '', name: 'Lesson', description: '', order: 0 });
+        }
+      } catch (e) {
+        setLesson({ id: lessonId!, moduleId: '', name: 'Lesson', description: '', order: 0 });
       }
 
-      // Load flashcards for the lesson
-      const flashcardsResponse = await flashcardApi.getFlashcardsByLesson(lessonId!);
-      if (flashcardsResponse.success) {
-        setFlashcards(flashcardsResponse.data);
-      } else {
-        // If flashcards fail to load, set empty array but don't show error
-        setFlashcards([]);
+      // Always try preview flashcards from AI endpoint so user can see content (only once per lesson)
+      if (previewRequestedForLessonRef.current !== lessonId) {
+        await loadPreviewFlashcards(flashcardCount);
       }
     } catch (err) {
       setError('Failed to load lesson data');
@@ -60,11 +68,63 @@ const LessonDetail: React.FC = () => {
     }
   };
 
+  const loadPreviewFlashcards = async (count: number) => {
+    if (!lessonId) return;
+    // Guard: prevent duplicate preview requests for same lesson
+    if (previewRequestedForLessonRef.current === lessonId) return;
+    try {
+      setPreviewingFlashcards(true);
+      setStatusMsg('Loading drafts...');
+      // Mark as requested immediately to block re-entrancy
+      previewRequestedForLessonRef.current = lessonId;
+      const response = await flashcardApi.getDrafts();
+      if (response.success) {
+        const drafts = (response.data || []).filter((d) => d.lessonId === lessonId).slice(0, count);
+        setFlashcards(drafts);
+        setCurrentBufferId(`content_${lessonId}_${Date.now()}.json`);
+        setStatusMsg(null);
+      } else {
+        setFlashcards([]);
+        setStatusMsg('No drafts available.');
+      }
+    } catch (e: any) {
+      setStatusMsg('Failed to load drafts.');
+    }
+  };
+
+  const startPollingForFlashcards = async () => {
+    if (!lessonId) return;
+    if (polling) return;
+    setPolling(true);
+    try {
+      // Poll every 5 seconds up to 10 minutes
+      const start = Date.now();
+      const maxMs = 10 * 60 * 1000;
+      while (Date.now() - start < maxMs) {
+        try {
+          const res = await flashcardApi.getFlashcardsByLesson(lessonId);
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setFlashcards(res.data);
+            setStatusMsg(null);
+            break;
+          }
+        } catch {}
+        setStatusMsg('Still generating... checking again shortly.');
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+    } finally {
+      setPolling(false);
+    }
+  };
+
   const handleGenerateFlashcards = async () => {
     if (!lessonId) return;
+    // Guard: ensure generate is only triggered once per lesson
+    if (generateRequestedForLessonRef.current === lessonId) return;
     
     try {
       setGeneratingFlashcards(true);
+      generateRequestedForLessonRef.current = lessonId;
       const response = await flashcardApi.generateFlashcards({
         lessonId,
         count: flashcardCount
@@ -245,6 +305,28 @@ const LessonDetail: React.FC = () => {
             )}
           </button>
         </div>
+        {statusMsg && (
+          <p className="mt-3 text-sm text-gray-600">{statusMsg}</p>
+        )}
+      </div>
+
+      {/* Preview from AI endpoint */}
+      <div className="card">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              if (previewRequestedForLessonRef.current !== lessonId) {
+                loadPreviewFlashcards(flashcardCount);
+              }
+            }}
+            disabled={previewRequestedForLessonRef.current === lessonId}
+          >
+            Preview Flashcards
+          </button>
+          <span className="text-sm text-gray-500">Uses AI preview endpoint</span>
+        </div>
       </div>
 
       {/* Preview/Approval Actions */}
@@ -295,14 +377,63 @@ const LessonDetail: React.FC = () => {
                   <div className="flex-1">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Front</h4>
-                        <p className="text-gray-900">{flashcard.front}</p>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">Prompt</h4>
+                        <p className="text-gray-900">{flashcard.raw?.prompt || flashcard.front}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {flashcard.raw?.flashcard_mode && (
+                            <span className="badge badge-info">{flashcard.raw.flashcard_mode}</span>
+                          )}
+                          {flashcard.raw?.question_type && (
+                            <span className="badge badge-warning">{flashcard.raw.question_type}</span>
+                          )}
+                          {flashcard.raw?.answer_type && (
+                            <span className="badge badge-success">{flashcard.raw.answer_type}</span>
+                          )}
+                          {typeof flashcard.raw?.order_index === 'number' && (
+                            <span className="badge">#{flashcard.raw.order_index}</span>
+                          )}
+                        </div>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Back</h4>
-                        <p className="text-gray-900">{flashcard.back}</p>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">Details</h4>
+                        {flashcard.raw?.content_data?.subtext && (
+                          <p className="text-gray-900">{flashcard.raw.content_data.subtext}</p>
+                        )}
+                        {/* MCQ options */}
+                        {flashcard.raw?.answer_type === 'mcq' && Array.isArray(flashcard.raw?.content_data?.answer?.options) && (
+                          <ul className="mt-2 list-disc list-inside text-gray-900 text-sm">
+                            {flashcard.raw.content_data.answer.options.map((opt: string, i: number) => (
+                              <li key={i} className={opt === flashcard.raw?.content_data?.answer?.correct ? 'font-semibold text-green-700' : ''}>
+                                {opt}
+                                {opt === flashcard.raw?.content_data?.answer?.correct && (
+                                  <span className="ml-2 badge badge-success">correct</span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {/* Media links */}
+                        <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                          {flashcard.raw?.content_data?.image_url && (
+                            <a href={flashcard.raw.content_data.image_url} target="_blank" rel="noreferrer" className="text-primary-700 underline">Image</a>
+                          )}
+                          {flashcard.raw?.content_data?.audio_url && (
+                            <a href={flashcard.raw.content_data.audio_url} target="_blank" rel="noreferrer" className="text-primary-700 underline">Audio</a>
+                          )}
+                          {flashcard.raw?.content_data?.video_url && (
+                            <a href={flashcard.raw.content_data.video_url} target="_blank" rel="noreferrer" className="text-primary-700 underline">Video</a>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    {flashcard.raw && (
+                      <details className="mt-3">
+                        <summary className="text-sm text-gray-600 cursor-pointer">View raw JSON</summary>
+                        <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto">
+{JSON.stringify(flashcard.raw, null, 2)}
+                        </pre>
+                      </details>
+                    )}
                     <div className="flex items-center gap-4 mt-3">
                       <span className={`badge ${
                         flashcard.status === 'approved' ? 'badge-success' : 
