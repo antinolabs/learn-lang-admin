@@ -22,7 +22,6 @@ const LessonDetail: React.FC = () => {
   const [previewingFlashcards, setPreviewingFlashcards] = useState(false);
   const [flashcardCount, setFlashcardCount] = useState(22);
   const [currentBufferId, setCurrentBufferId] = useState<string | null>(null);
-  const [polling, setPolling] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   // Guards to prevent repeated calls (e.g., React StrictMode double invoke or rapid clicks)
   const previewRequestedForLessonRef = useRef<string | null>(null);
