@@ -92,30 +92,7 @@ const LessonDetail: React.FC = () => {
     }
   };
 
-  const startPollingForFlashcards = async () => {
-    if (!lessonId) return;
-    if (polling) return;
-    setPolling(true);
-    try {
-      // Poll every 5 seconds up to 10 minutes
-      const start = Date.now();
-      const maxMs = 10 * 60 * 1000;
-      while (Date.now() - start < maxMs) {
-        try {
-          const res = await flashcardApi.getFlashcardsByLesson(lessonId);
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            setFlashcards(res.data);
-            setStatusMsg(null);
-            break;
-          }
-        } catch {}
-        setStatusMsg('Still generating... checking again shortly.');
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-    } finally {
-      setPolling(false);
-    }
-  };
+  // Removed legacy polling helper; drafts endpoint provides data directly
 
   const handleGenerateFlashcards = async () => {
     if (!lessonId) return;
