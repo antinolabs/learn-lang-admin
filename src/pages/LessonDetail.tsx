@@ -161,10 +161,22 @@ const LessonDetail: React.FC = () => {
     ));
   };
 
-  const handleApproveFlashcard = (flashcardId: string) => {
-    setFlashcards(prev => prev.map(f => 
-      f.id === flashcardId ? { ...f, status: 'approved' as const } : f
-    ));
+  const handleApproveFlashcard = (flashcardId: string, draftId?: string, lessonId?: string) => {
+    if (!flashcardId || !draftId || !lessonId) {
+      console.error('Missing identifiers for approve:', { flashcardId, draftId, lessonId });
+      return;
+    }
+    flashcardApi.approveFlashcard({ flashcardId, draftId, lessonId })
+      .then((response) => {
+        if (response.success) {
+          setFlashcards(prev => prev.map(f => 
+            f.id === flashcardId ? { ...f, status: 'approved' as const } : f
+          ));
+        }
+      })
+      .catch((err) => {
+        console.error('Error approving flashcard:', err);
+      });
   };
 
   if (loading) {
@@ -441,7 +453,7 @@ const LessonDetail: React.FC = () => {
                   {previewingFlashcards && flashcard.status === 'pending' && (
                     <div className="flex items-center gap-2 ml-4">
                       <button
-                        onClick={() => handleApproveFlashcard(flashcard.id)}
+                        onClick={() => handleApproveFlashcard((flashcard as any).raw?._id || flashcard.id, (flashcard as any).raw?._draft_id, flashcard.lessonId || (flashcard as any).raw?._lesson_id || (flashcard as any).raw?.lesson_id)}
                         className="btn btn-success btn-sm flex items-center gap-1"
                       >
                         <Check className="h-4 w-4" />

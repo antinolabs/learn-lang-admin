@@ -268,7 +268,12 @@ export const flashcardApi = {
     // Flatten all flashcards from all drafts
     const flatFlashcards: any[] = draftsContainer.flatMap((d: any) => {
       const list = Array.isArray(d?.flashcards) ? d.flashcards : [];
-      return list.map((fc: any) => ({ ...fc, _buffer_id: d?.buffer_id || d?.bufferId }));
+      return list.map((fc: any) => ({
+        ...fc,
+        _buffer_id: d?.buffer_id || d?.bufferId,
+        _draft_id: d?._id || d?.draft_id || d?.draftId,
+        _lesson_id: d?.lesson_id || d?.lessonId
+      }));
     });
     const mapped: Flashcard[] = flatFlashcards.map((fc: any, idx: number) => {
       const isMcq = (fc.answer_type === 'mcq') && fc.content_data?.answer;
@@ -279,7 +284,7 @@ export const flashcardApi = {
         : (fc.content_data?.subtext || '');
       return {
         id: fc._id || String(idx),
-        lessonId: fc.lesson_id || '',
+        lessonId: fc.lesson_id || fc._lesson_id || '',
         front: fc.prompt || '',
         back: backText,
         difficulty: 'medium',
@@ -296,6 +301,13 @@ export const flashcardApi = {
   // Approve flashcards
   approveFlashcards: async (data: ApproveFlashcardsRequest): Promise<ApiResponse<void>> => {
     const response = await api.post('/ai/approve/lesson', data);
+    return response.data;
+  },
+
+  // Approve single flashcard
+  approveFlashcard: async (payload: { flashcardId: string; draftId: string; lessonId: string }): Promise<ApiResponse<void>> => {
+    const { flashcardId, draftId, lessonId } = payload;
+    const response = await api.post('/ai/approve/flash-card', { flashcardId, draftId, lessonId });
     return response.data;
   },
 
