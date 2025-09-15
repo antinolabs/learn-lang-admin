@@ -23,6 +23,9 @@ const LessonDetail: React.FC = () => {
   const [flashcardCount, setFlashcardCount] = useState(22);
   const [currentBufferId, setCurrentBufferId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [allFlashcards, setAllFlashcards] = useState<Flashcard[]>([]);
+  const [displayedCount, setDisplayedCount] = useState(20);
+  const [hasMoreFlashcards, setHasMoreFlashcards] = useState(false);
   // Guards to prevent repeated calls (e.g., React StrictMode double invoke or rapid clicks)
   const previewRequestedForLessonRef = useRef<string | null>(null);
   const generateRequestedForLessonRef = useRef<string | null>(null);
@@ -78,17 +81,27 @@ const LessonDetail: React.FC = () => {
       previewRequestedForLessonRef.current = lessonId;
       const response = await flashcardApi.getDrafts();
       if (response.success) {
-        const drafts = (response.data || []).filter((d) => d.lessonId === lessonId).slice(0, count);
-        setFlashcards(drafts);
+        const drafts = (response.data || []).filter((d) => d.lessonId === lessonId);
+        setAllFlashcards(drafts);
+        setFlashcards(drafts.slice(0, displayedCount));
+        setHasMoreFlashcards(drafts.length > displayedCount);
         setCurrentBufferId(`content_${lessonId}_${Date.now()}.json`);
         setStatusMsg(null);
       } else {
+        setAllFlashcards([]);
         setFlashcards([]);
         setStatusMsg('No drafts available.');
       }
     } catch (e: any) {
       setStatusMsg('Failed to load drafts.');
     }
+  };
+
+  const handleLoadMore = () => {
+    const newDisplayedCount = displayedCount + 20;
+    setDisplayedCount(newDisplayedCount);
+    setFlashcards(allFlashcards.slice(0, newDisplayedCount));
+    setHasMoreFlashcards(allFlashcards.length > newDisplayedCount);
   };
 
   // Removed legacy polling helper; drafts endpoint provides data directly
@@ -448,6 +461,22 @@ const LessonDetail: React.FC = () => {
             ))
           )}
         </div>
+        
+        {/* Load More Button */}
+        {hasMoreFlashcards && (
+          <div className="mt-6 text-center">
+            <button
+              onClick={handleLoadMore}
+              className="btn btn-primary flex items-center gap-2 mx-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Load More Flashcards
+            </button>
+            <p className="text-sm text-gray-500 mt-2">
+              Showing {flashcards.length} of {allFlashcards.length} flashcards
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -268,7 +268,7 @@ export const flashcardApi = {
     });
     const raw: any = response.data || {};
     // Shape: { success, payload: { drafts: [ { buffer_id, lesson_id, flashcards: [...] }, ... ] } }
-    const draftsContainer: any[] = raw?.payload?.drafts || raw?.drafts || [];
+    const draftsContainer: any[] = raw?.payload?.drafts || [];
     // Flatten all flashcards from all drafts
     const flatFlashcards: any[] = draftsContainer.flatMap((d: any) => {
       const list = Array.isArray(d?.flashcards) ? d.flashcards : [];
