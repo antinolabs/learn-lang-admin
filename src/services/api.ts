@@ -261,11 +261,7 @@ export const flashcardApi = {
 
   // Fetch AI draft flashcards (external drafts endpoint)
   getDrafts: async (): Promise<ApiResponse<Flashcard[]>> => {
-    // Call absolute URL to ensure using the correct port as requested
-    const response = await axios.get('http://localhost:3001/api/ai/drafts', {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 600000
-    });
+    const response = await api.get('/ai/drafts');
     const raw: any = response.data || {};
     // Shape: { success, payload: { drafts: [ { buffer_id, lesson_id, flashcards: [...] }, ... ] } }
     const draftsContainer: any[] = raw?.payload?.drafts || [];
