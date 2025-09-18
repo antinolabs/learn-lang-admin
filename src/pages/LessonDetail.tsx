@@ -26,9 +26,11 @@ const LessonDetail: React.FC = () => {
   const [allFlashcards, setAllFlashcards] = useState<Flashcard[]>([]);
   const [displayedCount, setDisplayedCount] = useState(20);
   const [hasMoreFlashcards, setHasMoreFlashcards] = useState(false);
+  const [loader,setLoader]=useState(false)
   // Guards to prevent repeated calls (e.g., React StrictMode double invoke or rapid clicks)
   const previewRequestedForLessonRef = useRef<string | null>(null);
   const generateRequestedForLessonRef = useRef<string | null>(null);
+  const [buttonClicked,setButtonClicked]=useState(false)
 
   useEffect(() => {
     if (lessonId) {
@@ -37,9 +39,9 @@ const LessonDetail: React.FC = () => {
       generateRequestedForLessonRef.current = null;
       loadLessonData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId]);
-
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [lessonId]);
+ 
   const loadLessonData = async () => {
     try {
       setLoading(true);
@@ -107,6 +109,7 @@ const LessonDetail: React.FC = () => {
   // Removed legacy polling helper; drafts endpoint provides data directly
 
   const handleGenerateFlashcards = async () => {
+    setButtonClicked(true)
     if (!lessonId) return;
     // Guard: ensure generate is only triggered once per lesson
     if (generateRequestedForLessonRef.current === lessonId) return;
@@ -118,8 +121,10 @@ const LessonDetail: React.FC = () => {
         lessonId,
         count: flashcardCount
       });
-      
+      console.log("response",response)
+
       if (response.success) {
+        console.log("response",response)
         setFlashcards(response.data);
         setPreviewingFlashcards(true);
         // Extract bufferId from response if available
@@ -197,6 +202,7 @@ const LessonDetail: React.FC = () => {
       </div>
     );
   }
+  console.log(flashcards)
 
   return (
     <div className="space-y-6">
@@ -365,13 +371,7 @@ const LessonDetail: React.FC = () => {
         </div>
         
         <div className="space-y-4">
-          {flashcards.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No flashcards yet</h3>
-              <p className="mt-1 text-sm text-gray-500">Generate flashcards to get started</p>
-            </div>
-          ) : (
+        {buttonClicked && flashcards.length===0 ?<p>Loading...</p>: 
             flashcards.map((flashcard) => (
               <div key={flashcard.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
@@ -471,7 +471,7 @@ const LessonDetail: React.FC = () => {
                 </div>
               </div>
             ))
-          )}
+}
         </div>
         
         {/* Load More Button */}

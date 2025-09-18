@@ -14,15 +14,17 @@ import {
   BackendLesson
 } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    "Access-Control-Allow-Origin": "*"
   },
   // Allow very long-running AI operations without client-side timeout
   timeout: 600000, // 10 minutes
+
 });
 
 // Course API
