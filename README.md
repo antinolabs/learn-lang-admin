@@ -80,7 +80,7 @@ cp .env.example .env
 4. Configure your API base URL in `.env`:
 ```bash
 # For local development
-REACT_APP_API_BASE_URL=http://localhost:3000/api
+REACT_APP_API_BASE_URL=http://localhost:3001/api
 
 # For dev tunnel (port forwarding)
 REACT_APP_API_BASE_URL=https://gnh3rb7x-3001.inc1.devtunnels.ms/api

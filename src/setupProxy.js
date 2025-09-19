@@ -5,10 +5,16 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:3001',
+      target: process.env.REACT_APP_API_BASE_URL,
       changeOrigin: true,
       proxyTimeout: 600000, // 10 min
-      timeout: 600000
+      timeout: 600000,
+      onProxyReq: function(proxyReq, req, res) {
+        proxyReq.setTimeout(600000);
+      },
+      onProxyRes: function(proxyRes, req, res) {
+        proxyRes.setTimeout(600000);
+      }
     })
   );
 };

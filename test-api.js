@@ -1,7 +1,7 @@
 // Simple API test script
 const axios = require('axios');
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://gnh3rb7x-3001.inc1.devtunnels.ms/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ;
 
 async function testAPI() {
   console.log('Testing API connection...');
