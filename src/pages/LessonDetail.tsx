@@ -26,7 +26,6 @@ const LessonDetail: React.FC = () => {
   const [allFlashcards, setAllFlashcards] = useState<Flashcard[]>([]);
   const [displayedCount, setDisplayedCount] = useState(20);
   const [hasMoreFlashcards, setHasMoreFlashcards] = useState(false);
-  const [loader,setLoader]=useState(false)
   // Guards to prevent repeated calls (e.g., React StrictMode double invoke or rapid clicks)
   const previewRequestedForLessonRef = useRef<string | null>(null);
   const generateRequestedForLessonRef = useRef<string | null>(null);
