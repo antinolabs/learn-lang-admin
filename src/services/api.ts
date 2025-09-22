@@ -320,4 +320,26 @@ export const flashcardApi = {
   }
 };
 
+// Categories API
+export interface Category {
+  _id: string;
+  name: string;
+  description: string;
+  icon_url: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const categoriesApi = {
+  getCategories: async (): Promise<ApiResponse<Category[]>> => {
+    const response = await api.get('/categories');
+    const raw = response.data;
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || [],
+      message: raw.message
+    };
+  }
+};
+
 export default api;

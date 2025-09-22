@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { courseCreateApi } from '../services/api';
+import { courseCreateApi, categoriesApi, Category } from '../services/api';
 
 interface CourseInput {
   title: string;
@@ -13,11 +13,30 @@ interface CourseInput {
 const NewCourse: React.FC = () => {
   const navigate = useNavigate();
   const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [courses, setCourses] = useState<CourseInput[]>([
     { title: '', description: '', level: 'beginner', language: 'en', is_premium: false }
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await categoriesApi.getCategories();
+        if (response.success) {
+          setCategories(response.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const addCourse = () => {
     setCourses([...courses, { title: '', description: '', level: 'beginner', language: 'en', is_premium: false }]);
@@ -67,14 +86,24 @@ const NewCourse: React.FC = () => {
 
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="card">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Category ID</label>
-          <input
-            className="input"
-            placeholder="60d5ec9f8f1a2e3b4c8d7e6f"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
-          />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+          {loadingCategories ? (
+            <div className="input">Loading categories...</div>
+          ) : (
+            <select
+              className="input"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              required
+            >
+              <option value="">Select a category</option>
+              {categories.map((category) => (
+                <option key={category._id} value={category._id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {courses.map((c, idx) => (
