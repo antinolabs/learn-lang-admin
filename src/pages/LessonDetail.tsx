@@ -30,7 +30,19 @@ const LessonDetail: React.FC = () => {
   const previewRequestedForLessonRef = useRef<string | null>(null);
   const generateRequestedForLessonRef = useRef<string | null>(null);
   const [buttonClicked,setButtonClicked]=useState(false)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+ 
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    window.setTimeout(() => setToast(null), 3000);
+  }
+ 
+  const [promptModal, setPromptModal] = useState<{ open: boolean; draftId?: string; flashcardId?: string; prompt: string; mediaType: 'image' | 'audio' | 'video' }>(
+    { open: false, prompt: '', mediaType: 'image' }
+  )
 
+  const [uploadProgressById, setUploadProgressById] = useState<Record<string, number>>({})
+ 
   useEffect(() => {
     if (lessonId) {
       // Reset guards when lesson changes
@@ -205,6 +217,11 @@ const LessonDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded shadow text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -450,21 +467,92 @@ const LessonDetail: React.FC = () => {
                     </div>
                   </div>
                   {previewingFlashcards && flashcard.status === 'pending' && (
-                    <div className="flex items-center gap-2 ml-4">
-                      <button
-                        onClick={() => handleApproveFlashcard((flashcard as any).raw?._id || flashcard.id, (flashcard as any).raw?._draft_id, flashcard.lessonId || (flashcard as any).raw?._lesson_id || (flashcard as any).raw?.lesson_id)}
-                        className="btn btn-success btn-sm flex items-center gap-1"
-                      >
-                        <Check className="h-4 w-4" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleRejectFlashcard(flashcard.id)}
-                        className="btn btn-danger btn-sm flex items-center gap-1"
-                      >
-                        <X className="h-4 w-4" />
-                        Reject
-                      </button>
+                    <div className="flex flex-col items-end gap-10 ml-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleApproveFlashcard((flashcard as any).raw?._id || flashcard.id, (flashcard as any).raw?._draft_id, flashcard.lessonId || (flashcard as any).raw?._lesson_id || (flashcard as any).raw?.lesson_id)}
+                          className="btn btn-success btn-sm flex items-center gap-1"
+                        >
+                          <Check className="h-4 w-4" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectFlashcard(flashcard.id)}
+                          className="btn btn-danger btn-sm flex items-center gap-1"
+                        >
+                          <X className="h-4 w-4" />
+                          Reject
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <label className="btn btn-secondary btn-sm">
+                          Upload File
+                          <input
+                            type="file"
+                            accept="image/*,audio/*,video/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const input = e.currentTarget as HTMLInputElement;
+                              const file = input.files?.[0];
+                              const draftId = (flashcard as any).raw?._draft_id;
+                              const flashcardId = (flashcard as any).raw?._id || flashcard.id;
+                              if (!file || !draftId || !flashcardId) return;
+                              (async () => {
+                                try {
+                                  setUploadProgressById((p) => ({ ...p, [flashcardId]: 1 }));
+                                  const res = await flashcardApi.uploadFlashcardMedia(draftId, flashcardId, file, (pct) => {
+                                    setUploadProgressById((p) => ({ ...p, [flashcardId]: pct }));
+                                  });
+                                  const payload: any = (res as any)?.payload || (res as any)?.data || res;
+                                  const uploadedUrl: string = payload?.mediaUrl || payload?.url || payload?.fileUrl || payload?.image_url || payload?.audio_url || payload?.video_url || '';
+                                  const typeGuess: 'image' | 'audio' | 'video' = file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'video';
+                                  if (uploadedUrl) {
+                                    setFlashcards(prev => prev.map(f => {
+                                      if ((f as any).raw?._id === flashcardId || f.id === flashcardId) {
+                                        const next = { ...f } as any;
+                                        next.raw = next.raw || {};
+                                        next.raw.content_data = next.raw.content_data || {};
+                                        if (typeGuess === 'image') next.raw.content_data.image_url = uploadedUrl;
+                                        if (typeGuess === 'audio') next.raw.content_data.audio_url = uploadedUrl;
+                                        if (typeGuess === 'video') next.raw.content_data.video_url = uploadedUrl;
+                                        return next as Flashcard;
+                                      }
+                                      return f;
+                                    }));
+                                  }
+                                  showToast('success', 'File uploaded successfully');
+                                } catch (err) {
+                                  console.error('Error uploading media:', err);
+                                  showToast('error', 'Failed to upload file');
+                                } finally {
+                                  setUploadProgressById((p) => ({ ...p, [flashcardId]: 0 }));
+                                  input.value = '';
+                                }
+                              })();
+                            }}
+                          />
+                        </label>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setPromptModal({
+                            open: true,
+                            draftId: (flashcard as any).raw?._draft_id,
+                            flashcardId: (flashcard as any).raw?._id || flashcard.id,
+                            prompt: '',
+                            mediaType: 'image'
+                          })}
+                        >
+                          Prompt
+                        </button>
+                      </div>
+                      {uploadProgressById[((flashcard as any).raw?._id || flashcard.id)] > 0 && (
+                        <div className="w-48 h-2 bg-gray-200 rounded">
+                          <div
+                            className="h-2 bg-blue-600 rounded"
+                            style={{ width: `${uploadProgressById[((flashcard as any).raw?._id || flashcard.id)]}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -489,6 +577,56 @@ const LessonDetail: React.FC = () => {
           </div>
         )}
       </div>
+      {promptModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md shadow-lg">
+            <h3 className="text-lg font-semibold mb-3">Generate Media by Prompt</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+                <textarea
+                  className="input w-full"
+                  rows={3}
+                  value={promptModal.prompt}
+                  onChange={(e) => setPromptModal((m) => ({ ...m, prompt: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Media Type</label>
+                <select
+                  className="input w-full"
+                  value={promptModal.mediaType}
+                  onChange={(e) => setPromptModal((m) => ({ ...m, mediaType: e.target.value as any }))}
+                >
+                  <option value="image">Image</option>
+                  <option value="audio">Audio</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-secondary" onClick={() => setPromptModal({ open: false, prompt: '', mediaType: 'image' })}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  const { draftId, flashcardId, prompt, mediaType } = promptModal;
+                  if (!draftId || !flashcardId || !prompt) return;
+                  try {
+                    await flashcardApi.uploadFlashcardMediaByPrompt(draftId, flashcardId, prompt, mediaType);
+                    showToast('success', 'Prompt submitted successfully');
+                    setPromptModal({ open: false, prompt: '', mediaType: 'image' });
+                  } catch (err) {
+                    console.error('Error sending prompt:', err);
+                    showToast('error', 'Failed to submit prompt');
+                  }
+                }}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
