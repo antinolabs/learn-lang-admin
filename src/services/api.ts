@@ -313,6 +313,43 @@ export const flashcardApi = {
     return response.data;
   },
 
+  // Upload media for a specific flashcard in a draft
+  uploadFlashcardMedia: async (
+    draftId: string,
+    flashcardId: string,
+    file: File,
+    onUploadProgress?: (percent: number) => void
+  ): Promise<ApiResponse<any>> => {
+    const form = new FormData();
+    form.append('flashcardId', flashcardId);
+    form.append('file', file);
+    const response = await api.put(`/ai/drafts/${draftId}/media`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (evt) => {
+        const total = (evt?.total || (evt as any)?.srcElement?.getResponseHeader?.('content-length')) as number | undefined;
+        if (onUploadProgress && total) {
+          const percent = Math.round(((evt.loaded || 0) * 100) / total);
+          onUploadProgress(percent);
+        }
+      }
+    });
+    return response.data;
+  },
+
+  // Generate/upload media via prompt for a specific flashcard in a draft
+  uploadFlashcardMediaByPrompt: async (
+    draftId: string,
+    flashcardId: string,
+    prompt: string,
+    mediaType: 'image' | 'audio' | 'video'
+  ): Promise<ApiResponse<any>> => {
+    const body = { prompt, mediaType, flashcardId } as any;
+    const response = await api.put(`/ai/drafts/${draftId}/media`, body, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  },
+
   // Get flashcards for a lesson
   getFlashcardsByLesson: async (lessonId: string): Promise<ApiResponse<Flashcard[]>> => {
     const response = await api.get(`/lessons/${lessonId}/flashcards`);
