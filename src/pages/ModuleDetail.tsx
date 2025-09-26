@@ -23,6 +23,21 @@ const ModuleDetail: React.FC = () => {
   const [page, setPage] = useState(0);
   const [pageLimit, setPageLimit] = useState(10);
   const [search, setSearch] = useState('');
+  const [addingLessonId, setAddingLessonId] = useState<string | null>(null);
+  const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null);
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; description: string } | null>(null);
+  const [savingLessonId, setSavingLessonId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [addForm, setAddForm] = useState<{
+    title: string;
+    description: string;
+    level: string;
+    tagsText: string;
+    order_index: number;
+    is_active: boolean;
+  }>({ title: '', description: '', level: 'beginner', tagsText: '', order_index: 1, is_active: true });
+  const [creating, setCreating] = useState<boolean>(false);
 
   useEffect(() => {
     if (moduleId) {
@@ -58,16 +73,26 @@ const ModuleDetail: React.FC = () => {
     }
   };
 
-  const loadLessons = async () => {
+  const loadLessons = async (
+    p: number = page,
+    limit: number = pageLimit,
+    searchText: string = search,
+    sticky?: Lesson
+  ) => {
     if (!moduleId) return;
-    const skip = page * pageLimit;
+    const skip = p * limit;
     const lessonsResponse = await lessonApi.getLessonsByModule(moduleId!, {
       skip,
-      limit: pageLimit,
-      search: search || undefined
+      limit,
+      search: searchText || undefined
     });
     if (lessonsResponse.success) {
-      setLessons(lessonsResponse.data);
+      const fetched = lessonsResponse.data || [];
+      if (sticky && !fetched.find((l) => l.id === sticky.id)) {
+        setLessons([sticky, ...fetched]);
+      } else {
+        setLessons(fetched);
+      }
     } else {
       setLessons([]);
     }
@@ -98,6 +123,89 @@ const ModuleDetail: React.FC = () => {
     if (!moduleId) return;
     setPage(0);
     await loadLessons();
+  };
+
+  const handleAddLesson = async (afterLesson?: Lesson) => {
+    // deprecated per-item add
+  };
+
+  const submitNewLesson = async () => {
+    if (!moduleId || !module) return;
+    try {
+      setCreating(true);
+      const tags = addForm.tagsText
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      const response = await lessonApi.createLesson({
+        moduleId,
+        courseId: module.courseId,
+        title: addForm.title,
+        description: addForm.description,
+        level: addForm.level,
+        order_index: addForm.order_index,
+        tags,
+        is_active: addForm.is_active
+      });
+      if (response.success) {
+        setShowAddForm(false);
+        setAddForm({ title: '', description: '', level: 'beginner', tagsText: '', order_index: 1, is_active: true });
+        const created = response.data as Lesson | undefined;
+        if (created) {
+          // Persist locally without immediate refetch to avoid race overwriting
+          setLessons((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
+        }
+      }
+    } catch (err) {
+      console.error('Error creating lesson:', err);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDeleteLesson = async (lesson: Lesson) => {
+    try {
+      setDeletingLessonId(lesson.id);
+      const response = await lessonApi.deleteLesson(lesson.id);
+      if (response.success) {
+        await loadLessons();
+      }
+    } catch (err) {
+      console.error('Error deleting lesson:', err);
+    } finally {
+      setDeletingLessonId(null);
+    }
+  };
+
+  const startEdit = (lesson: Lesson) => {
+    setEditingLessonId(lesson.id);
+    setEditForm({ name: lesson.name, description: lesson.description || '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingLessonId(null);
+    setEditForm(null);
+  };
+
+  const saveEdit = async (lesson: Lesson) => {
+    if (!editForm) return;
+    try {
+      setSavingLessonId(lesson.id);
+      const response = await lessonApi.updateLesson(lesson.id, {
+        moduleId: lesson.moduleId,
+        courseId: module?.courseId,
+        title: editForm.name,
+        description: editForm.description,
+      });
+      if (response.success) {
+        await loadLessons();
+        cancelEdit();
+      }
+    } catch (err) {
+      console.error('Error updating lesson:', err);
+    } finally {
+      setSavingLessonId(null);
+    }
   };
 
   const handlePrev = () => {
@@ -246,6 +354,13 @@ const ModuleDetail: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Lessons</h2>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowAddForm((v) => !v)}
+            >
+              {showAddForm ? 'Close' : 'Add Lesson'}
+            </button>
             <span className="text-sm text-gray-500">
               Page {page + 1}
             </span>
@@ -269,6 +384,92 @@ const ModuleDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {showAddForm && (
+          <div className="mb-6 border border-gray-200 rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Title</label>
+                <input
+                  className="input w-full"
+                  value={addForm.title}
+                  onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
+                  placeholder="Lesson title"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Level</label>
+                <select
+                  className="input w-full"
+                  value={addForm.level}
+                  onChange={(e) => setAddForm({ ...addForm, level: e.target.value })}
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="elementary">Elementary</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-600 mb-1">Description</label>
+                <textarea
+                  className="input w-full"
+                  rows={3}
+                  value={addForm.description}
+                  onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                  placeholder="Lesson description"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Tags (comma separated)</label>
+                <input
+                  className="input w-full"
+                  value={addForm.tagsText}
+                  onChange={(e) => setAddForm({ ...addForm, tagsText: e.target.value })}
+                  placeholder="e.g. poems,kids"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Order</label>
+                <input
+                  type="number"
+                  className="input w-full"
+                  value={addForm.order_index}
+                  onChange={(e) => setAddForm({ ...addForm, order_index: parseInt(e.target.value) || 1 })}
+                  min={1}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="publish-now"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={addForm.is_active}
+                  onChange={(e) => setAddForm({ ...addForm, is_active: e.target.checked })}
+                />
+                <label htmlFor="publish-now" className="text-sm text-gray-700">Publish now</label>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={submitNewLesson}
+                disabled={creating || !addForm.title}
+              >
+                {creating ? 'Creating...' : 'Create Lesson'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowAddForm(false)}
+                disabled={creating}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         
         <div className="space-y-4">
           {lessons.length === 0 ? (
@@ -284,9 +485,26 @@ const ModuleDetail: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-gray-500">#{lesson.order}</span>
-                      <h3 className="text-lg font-medium text-gray-900">{lesson.name}</h3>
+                      {editingLessonId === lesson.id ? (
+                        <input
+                          className="input input-sm w-80"
+                          value={editForm?.name || ''}
+                          onChange={(e) => setEditForm({ ...(editForm as any), name: e.target.value })}
+                        />
+                      ) : (
+                        <h3 className="text-lg font-medium text-gray-900">{lesson.name}</h3>
+                      )}
                     </div>
-                    <p className="text-gray-600 mt-1">{lesson.description}</p>
+                    {editingLessonId === lesson.id ? (
+                      <textarea
+                        className="input w-full mt-2"
+                        rows={2}
+                        value={editForm?.description || ''}
+                        onChange={(e) => setEditForm({ ...(editForm as any), description: e.target.value })}
+                      />
+                    ) : (
+                      <p className="text-gray-600 mt-1">{lesson.description}</p>
+                    )}
                     <div className="flex items-center gap-4 mt-2">
                       <span className={`badge ${
                         lesson.status === 'published' ? 'badge-success' : 
@@ -296,13 +514,53 @@ const ModuleDetail: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <Link
-                    to={`/lesson/${lesson.id}`}
-                    className="btn btn-secondary flex items-center gap-2"
-                  >
-                    Manage
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {editingLessonId === lesson.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => saveEdit(lesson)}
+                          className="btn btn-primary btn-sm"
+                          disabled={savingLessonId === lesson.id}
+                        >
+                          {savingLessonId === lesson.id ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="btn btn-secondary btn-sm"
+                          disabled={savingLessonId === lesson.id}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(lesson)}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLesson(lesson)}
+                          className="btn btn-danger btn-sm"
+                          disabled={deletingLessonId === lesson.id}
+                        >
+                          {deletingLessonId === lesson.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                        <Link
+                          to={`/lesson/${lesson.id}`}
+                          className="btn btn-secondary flex items-center gap-2"
+                        >
+                          Manage
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
