@@ -108,9 +108,9 @@ const CourseDetail: React.FC = () => {
   const loadModulesForCourse = async () => {
     if (!courseId) return;
     try {
-      const res = await moduleApi.getAllModules();
+      const res = await moduleApi.getModulesByCourseId(courseId);
       if (res.success) {
-        setModules(res.data.filter((m) => m.courseId === courseId));
+        setModules(res.data);
       } else {
         setModules([]);
       }
