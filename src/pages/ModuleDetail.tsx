@@ -23,7 +23,6 @@ const ModuleDetail: React.FC = () => {
   const [page, setPage] = useState(0);
   const [pageLimit, setPageLimit] = useState(10);
   const [search, setSearch] = useState('');
-  const [addingLessonId, setAddingLessonId] = useState<string | null>(null);
   const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null);
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; description: string } | null>(null);
@@ -125,9 +124,6 @@ const ModuleDetail: React.FC = () => {
     await loadLessons();
   };
 
-  const handleAddLesson = async (afterLesson?: Lesson) => {
-    // deprecated per-item add
-  };
 
   const submitNewLesson = async () => {
     if (!moduleId || !module) return;
