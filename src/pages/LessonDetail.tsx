@@ -617,9 +617,8 @@ const LessonDetail: React.FC = () => {
                               (async () => {
                                 try {
                                   setUploadProgressById((p) => ({ ...p, [flashcardId]: 1 }));
-                                  // Determine media type and path
+                                  // Determine media type
                                   const typeGuess: 'image' | 'audio' | 'video' = file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'video';
-                                  const mediaPath = `content_data.${typeGuess}_url`;
                                   
                                   const res = await flashcardApi.uploadFlashcardMedia(draftId, flashcardId, file, (pct: number) => {
                                     setUploadProgressById((p) => ({ ...p, [flashcardId]: pct }));
