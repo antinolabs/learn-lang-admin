@@ -7,7 +7,9 @@ import {
   CheckCircle,
   Clock,
   Check,
-  X
+  X,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { lessonApi, flashcardApi } from '../services/api';
 import { Lesson, Flashcard } from '../types';
@@ -42,6 +44,41 @@ const LessonDetail: React.FC = () => {
   )
 
   const [uploadProgressById, setUploadProgressById] = useState<Record<string, number>>({})
+
+  // Media preview panel state
+  const [mediaPreviewPanel, setMediaPreviewPanel] = useState<{
+    open: boolean;
+    url: string;
+    type: 'image' | 'audio' | 'video';
+    fileName: string;
+  }>({ open: false, url: '', type: 'image', fileName: '' })
+
+  // Inline edit state for JSON form
+  const [editModeById, setEditModeById] = useState<Record<string, boolean>>({})
+  const [formJsonById, setFormJsonById] = useState<Record<string, string>>({})
+  const [savingById, setSavingById] = useState<Record<string, boolean>>({})
+
+  // Copy URL to clipboard function
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('success', 'URL copied to clipboard!');
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('success', 'URL copied to clipboard!');
+      } catch (fallbackErr) {
+        showToast('error', 'Failed to copy URL');
+      }
+      document.body.removeChild(textArea);
+    }
+  };
  
   useEffect(() => {
     if (lessonId) {
@@ -51,7 +88,7 @@ const LessonDetail: React.FC = () => {
       loadLessonData();
     }
       // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [lessonId]);
+  }, [lessonId]);
  
   const loadLessonData = async () => {
     try {
@@ -193,6 +230,58 @@ const LessonDetail: React.FC = () => {
       .catch((err) => {
         console.error('Error approving flashcard:', err);
       });
+  };
+
+  // Inline JSON form handlers
+  const handleOpenEdit = (id: string, raw: any) => {
+    setEditModeById((m) => ({ ...m, [id]: true }));
+    setFormJsonById((f) => ({ ...f, [id]: JSON.stringify(raw || {}, null, 2) }));
+  };
+
+  const handleCancelEdit = (id: string) => {
+    setEditModeById((m) => ({ ...m, [id]: false }));
+  };
+
+  const handleSubmitEdit = async (id: string) => {
+    try {
+      setSavingById((s) => ({ ...s, [id]: true }));
+      const current = formJsonById[id] || '{}';
+      let parsed: any;
+      try {
+        parsed = JSON.parse(current);
+      } catch (e) {
+        showToast('error', 'Invalid JSON');
+        return;
+      }
+
+      // Optimistically update UI
+      setFlashcards((prev) => prev.map((f) => {
+        if (f.id === id) {
+          return { ...f, raw: parsed } as Flashcard;
+        }
+        return f;
+      }));
+
+      // Attempt server update using provided endpoint shape
+      const existing = flashcards.find((f) => f.id === id) as any;
+      const draftId = existing?.raw?._draft_id || parsed?._draft_id;
+      const apiBase = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+      if (draftId) {
+        await fetch(`${apiBase}/flashcards/drafts/${draftId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flashcards: parsed })
+        });
+      }
+
+      showToast('success', 'Flashcard updated');
+      setEditModeById((m) => ({ ...m, [id]: false }));
+    } catch (err) {
+      console.error('Failed to update flashcard:', err);
+      showToast('error', 'Update failed');
+    } finally {
+      setSavingById((s) => ({ ...s, [id]: false }));
+    }
   };
 
   if (loading) {
@@ -451,6 +540,34 @@ const LessonDetail: React.FC = () => {
                         </pre>
                       </details>
                     )}
+
+                    {/* Inline JSON edit form */}
+                    {!editModeById[flashcard.id] ? (
+                      <div className="mt-4">
+                        <button className="btn btn-secondary" onClick={() => handleOpenEdit(flashcard.id, (flashcard as any).raw || {})}>Edit</button>
+                      </div>
+                    ) : (
+                      <div className="mt-4 border rounded-lg p-4 bg-white">
+                        <h4 className="text-md font-semibold text-gray-900 mb-2">Edit Flashcard JSON</h4>
+                                                <textarea
+                          className="input w-full font-mono text-sm"
+                          style={{ minHeight: 220 }}
+                          value={formJsonById[flashcard.id] || ''}
+                          onChange={(e) => setFormJsonById((m) => ({ ...m, [flashcard.id]: e.target.value }))}
+                        />
+                        <div className="flex items-center gap-3 mt-3 flex-wrap">
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleSubmitEdit(flashcard.id)}
+                            disabled={!!savingById[flashcard.id]}
+                          >
+                            {savingById[flashcard.id] ? 'Saving...' : 'Submit'}
+                          </button>
+                          <button className="btn btn-secondary" onClick={() => handleCancelEdit(flashcard.id)} disabled={!!savingById[flashcard.id]}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-4 mt-3">
                       <span className={`badge ${
                         flashcard.status === 'approved' ? 'badge-success' : 
@@ -500,12 +617,156 @@ const LessonDetail: React.FC = () => {
                               (async () => {
                                 try {
                                   setUploadProgressById((p) => ({ ...p, [flashcardId]: 1 }));
-                                  const res = await flashcardApi.uploadFlashcardMedia(draftId, flashcardId, file, (pct) => {
+                                  // Determine media type and path
+                                  const typeGuess: 'image' | 'audio' | 'video' = file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'video';
+                                  const mediaPath = `content_data.${typeGuess}_url`;
+                                  
+                                  const res = await flashcardApi.uploadFlashcardMedia(draftId, flashcardId, file, (pct: number) => {
                                     setUploadProgressById((p) => ({ ...p, [flashcardId]: pct }));
                                   });
+                                  
+                                  // Extract URL from response - try multiple possible paths
+                                  console.log('=== UPLOAD DEBUG INFO ===');
+                                  console.log('File name:', file.name);
+                                  console.log('File type:', file.type);
+                                  console.log('File size:', file.size);
+                                  console.log('Full upload response:', JSON.stringify(res, null, 2));
+                                  
                                   const payload: any = (res as any)?.payload || (res as any)?.data || res;
-                                  const uploadedUrl: string = payload?.mediaUrl || payload?.url || payload?.fileUrl || payload?.image_url || payload?.audio_url || payload?.video_url || '';
-                                  const typeGuess: 'image' | 'audio' | 'video' = file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'video';
+                                  let uploadedUrl: string = '';
+                                  let extractionMethod = '';
+                                  
+                                  // Try different possible response structures with detailed logging
+                                  if (payload?.mediaUrl) {
+                                    uploadedUrl = payload.mediaUrl;
+                                    extractionMethod = 'payload.mediaUrl';
+                                  } else if (payload?.url) {
+                                    uploadedUrl = payload.url;
+                                    extractionMethod = 'payload.url';
+                                  } else if (payload?.fileUrl) {
+                                    uploadedUrl = payload.fileUrl;
+                                    extractionMethod = 'payload.fileUrl';
+                                  } else if (payload?.image_url) {
+                                    uploadedUrl = payload.image_url;
+                                    extractionMethod = 'payload.image_url';
+                                  } else if (payload?.audio_url) {
+                                    uploadedUrl = payload.audio_url;
+                                    extractionMethod = 'payload.audio_url';
+                                  } else if (payload?.video_url) {
+                                    uploadedUrl = payload.video_url;
+                                    extractionMethod = 'payload.video_url';
+                                  } else if (typeof payload === 'string' && payload.startsWith('http')) {
+                                    uploadedUrl = payload;
+                                    extractionMethod = 'direct string payload';
+                                  }
+                                  
+                                  // If still no URL found, try aggressive extraction from nested structures
+                                  // BUT prioritize URLs that are most recent or match the current upload
+                                  if (!uploadedUrl) {
+                                    const allFoundUrls: Array<{url: string, path: string}> = [];
+                                    
+                                    const searchForUrl = (obj: any, path: string = ''): void => {
+                                      if (typeof obj === 'string' && obj.startsWith('http')) {
+                                        allFoundUrls.push({url: obj, path});
+                                        console.log(`Found URL at path: ${path} = ${obj}`);
+                                      }
+                                      if (typeof obj === 'object' && obj !== null) {
+                                        for (const key in obj) {
+                                          const currentPath = path ? `${path}.${key}` : key;
+                                          if (key.toLowerCase().includes('url') && typeof obj[key] === 'string' && obj[key].startsWith('http')) {
+                                            allFoundUrls.push({url: obj[key], path: currentPath});
+                                            console.log(`Found URL at path: ${currentPath} = ${obj[key]}`);
+                                          } else {
+                                            searchForUrl(obj[key], currentPath);
+                                          }
+                                        }
+                                      }
+                                    };
+                                    
+                                    searchForUrl(res);
+                                    
+                                    if (allFoundUrls.length > 0) {
+                                      console.log('All found URLs:', allFoundUrls);
+                                      
+                                      // Try to find the most recent URL (highest timestamp)
+                                      const currentTime = Date.now();
+                                      let bestUrl = allFoundUrls[0].url;
+                                      let bestScore = 0;
+                                      
+                                      for (const {url, path} of allFoundUrls) {
+                                        let score = 0;
+                                        
+                                        // Extract timestamp from URL
+                                        const timestampMatch = url.match(/_(\d{13})_/);
+                                        if (timestampMatch) {
+                                          const urlTimestamp = parseInt(timestampMatch[1]);
+                                          const timeDiff = Math.abs(currentTime - urlTimestamp);
+                                          // Prefer more recent URLs (lower time difference = higher score)
+                                          score += Math.max(0, 1000000 - timeDiff);
+                                        }
+                                        
+                                        // Prefer URLs that match the uploaded filename
+                                        const fileBaseName = file.name.split('.')[0].toLowerCase();
+                                        if (url.toLowerCase().includes(fileBaseName)) {
+                                          score += 500000;
+                                        }
+                                        
+                                        // Prefer URLs in more specific paths (deeper = more specific)
+                                        score += path.split('.').length * 1000;
+                                        
+                                        console.log(`URL: ${url}, Score: ${score}, Path: ${path}`);
+                                        
+                                        if (score > bestScore) {
+                                          bestScore = score;
+                                          bestUrl = url;
+                                        }
+                                      }
+                                      
+                                      uploadedUrl = bestUrl;
+                                      extractionMethod = 'smart deep search';
+                                      console.log(`Selected best URL: ${uploadedUrl} with score: ${bestScore}`);
+                                    }
+                                  }
+                                  
+                                  // Try to find any S3 URLs in the response (more specific to your case)
+                                  if (!uploadedUrl) {
+                                    const findS3Urls = (obj: any): string[] => {
+                                      const urls: string[] = [];
+                                      const search = (item: any) => {
+                                        if (typeof item === 'string' && item.includes('s3.ap-south-1.amazonaws.com')) {
+                                          urls.push(item);
+                                        } else if (typeof item === 'object' && item !== null) {
+                                          Object.values(item).forEach(search);
+                                        }
+                                      };
+                                      search(obj);
+                                      return urls;
+                                    };
+                                    
+                                    const s3Urls = findS3Urls(res);
+                                    console.log('Found S3 URLs:', s3Urls);
+                                    
+                                    if (s3Urls.length > 0) {
+                                      // Try to find the most recent/relevant URL
+                                      const relevantUrl = s3Urls.find(url => 
+                                        url.includes(file.name.split('.')[0]) || 
+                                        url.includes(Date.now().toString().slice(-6))
+                                      ) || s3Urls[s3Urls.length - 1]; // Use the last one if no match
+                                      
+                                      uploadedUrl = relevantUrl;
+                                      extractionMethod = 'S3 URL search';
+                                    }
+                                  }
+                                  
+                                  console.log('Extraction method:', extractionMethod);
+                                  console.log('Extracted URL:', uploadedUrl);
+                                  console.log('=== END DEBUG INFO ===');
+                                  
+                                  // Always show the panel, even if URL extraction failed
+                                  // This way user can see what happened and we can debug
+                                  const finalUrl = uploadedUrl || `URL extraction failed - check console for response details`;
+                                  
+                                  // Update flashcard data if URL was found
                                   if (uploadedUrl) {
                                     setFlashcards(prev => prev.map(f => {
                                       if ((f as any).raw?._id === flashcardId || f.id === flashcardId) {
@@ -520,7 +781,22 @@ const LessonDetail: React.FC = () => {
                                       return f;
                                     }));
                                   }
-                                  showToast('success', 'File uploaded successfully');
+                                  
+                                  // ALWAYS show media preview panel - this is guaranteed to show
+                                  console.log('Opening media preview panel with URL:', finalUrl);
+                                  setMediaPreviewPanel({
+                                    open: true,
+                                    url: finalUrl,
+                                    type: typeGuess,
+                                    fileName: file.name
+                                  });
+                                  
+                                  // Show appropriate toast message
+                                  if (uploadedUrl) {
+                                    showToast('success', `${typeGuess.charAt(0).toUpperCase() + typeGuess.slice(1)} uploaded successfully! Panel opened with URL.`);
+                                  } else {
+                                    showToast('error', 'Upload completed but URL extraction failed. Check console and panel for details.');
+                                  }
                                 } catch (err) {
                                   console.error('Error uploading media:', err);
                                   showToast('error', 'Failed to upload file');
@@ -623,6 +899,157 @@ const LessonDetail: React.FC = () => {
               >
                 Submit
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Preview Panel */}
+      {mediaPreviewPanel.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-auto shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Media Uploaded Successfully</h3>
+              <button
+                onClick={() => setMediaPreviewPanel({ open: false, url: '', type: 'image', fileName: '' })}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* File Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`p-2 rounded-lg ${
+                    mediaPreviewPanel.type === 'image' ? 'bg-blue-100 text-blue-600' :
+                    mediaPreviewPanel.type === 'audio' ? 'bg-green-100 text-green-600' :
+                    'bg-purple-100 text-purple-600'
+                  }`}>
+                    {mediaPreviewPanel.type === 'image' && <BookOpen className="h-5 w-5" />}
+                    {mediaPreviewPanel.type === 'audio' && <BookOpen className="h-5 w-5" />}
+                    {mediaPreviewPanel.type === 'video' && <BookOpen className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{mediaPreviewPanel.fileName}</p>
+                    <p className="text-sm text-gray-500 capitalize">{mediaPreviewPanel.type} file</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Media Preview */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-medium text-gray-900 mb-3">Preview</h4>
+                {mediaPreviewPanel.type === 'image' && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={mediaPreviewPanel.url} 
+                      alt="Uploaded content"
+                      className="max-w-full max-h-64 object-contain rounded-lg shadow-sm"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling!.classList.remove('hidden');
+                      }}
+                    />
+                    <div className="hidden text-center text-gray-500 py-8">
+                      <BookOpen className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                      <p>Image preview not available</p>
+                    </div>
+                  </div>
+                )}
+                
+                {mediaPreviewPanel.type === 'audio' && (
+                  <div className="flex justify-center">
+                    <audio 
+                      controls 
+                      className="w-full max-w-md"
+                      onError={(e) => {
+                        (e.target as HTMLAudioElement).style.display = 'none';
+                        (e.target as HTMLAudioElement).nextElementSibling!.classList.remove('hidden');
+                      }}
+                    >
+                      <source src={mediaPreviewPanel.url} />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <div className="hidden text-center text-gray-500 py-8">
+                      <BookOpen className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                      <p>Audio preview not available</p>
+                    </div>
+                  </div>
+                )}
+                
+                {mediaPreviewPanel.type === 'video' && (
+                  <div className="flex justify-center">
+                    <video 
+                      controls 
+                      className="max-w-full max-h-64 rounded-lg shadow-sm"
+                      onError={(e) => {
+                        (e.target as HTMLVideoElement).style.display = 'none';
+                        (e.target as HTMLVideoElement).nextElementSibling!.classList.remove('hidden');
+                      }}
+                    >
+                      <source src={mediaPreviewPanel.url} />
+                      Your browser does not support the video element.
+                    </video>
+                    <div className="hidden text-center text-gray-500 py-8">
+                      <BookOpen className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                      <p>Video preview not available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* URL Section with Copy */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-3">Media URL</h4>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={mediaPreviewPanel.url}
+                    readOnly
+                    className="flex-1 input text-sm font-mono bg-gray-50"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(mediaPreviewPanel.url)}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                    title="Copy URL to clipboard"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </button>
+                  <a
+                    href={mediaPreviewPanel.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                    title="Open in new tab"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open
+                  </a>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Use this URL to reference the uploaded media in your applications
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  onClick={() => setMediaPreviewPanel({ open: false, url: '', type: 'image', fileName: '' })}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => copyToClipboard(mediaPreviewPanel.url)}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy URL
+                </button>
+              </div>
             </div>
           </div>
         </div>
