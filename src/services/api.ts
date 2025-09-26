@@ -188,6 +188,27 @@ export const moduleApi = {
   getModulesByCourse: async (courseId: string): Promise<ApiResponse<Module[]>> => {
     const response = await api.get(`/courses/${courseId}/modules`);
     return response.data;
+  },
+
+  // Get modules by course id via /modules/:courseId
+  getModulesByCourseId: async (courseId: string): Promise<ApiResponse<Module[]>> => {
+    const response = await api.get(`/modules/${courseId}`);
+    const raw = response.data as any;
+    const backendModulesAny: any = raw.data || raw.payload || raw.modules || [];
+    const list: any[] = Array.isArray(backendModulesAny)
+      ? backendModulesAny
+      : (backendModulesAny?.modules || backendModulesAny?.data || []);
+    const mapped: Module[] = (list || []).map((m: any) => ({
+      id: m._id || m.id,
+      courseId: typeof m.course_id === 'string' ? m.course_id : (m.course_id?._id || ''),
+      name: m.title || m.name,
+      description: m.description,
+      order: m.order_index ?? m.order ?? 0,
+      status: m.is_active ? 'published' : 'draft',
+      createdAt: m.created_at,
+      updatedAt: m.updated_at,
+    }));
+    return { success: !!raw.success || true, data: mapped, message: raw.message } as any;
   }
 };
 
