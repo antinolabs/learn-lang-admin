@@ -225,6 +225,93 @@ export const lessonApi = {
       updatedAt: l.updated_at,
     }));
     return { success: !!raw.success || true, data: mapped, message: raw.message };
+  },
+
+  // Create a new lesson (POST /api/lessons)
+  createLesson: async (payload: {
+    moduleId: string;
+    courseId?: string;
+    title: string;
+    description?: string;
+    level?: string;
+    order_index?: number;
+    tags?: string[];
+    is_active?: boolean;
+  }): Promise<ApiResponse<Lesson>> => {
+    const body = {
+      module_id: payload.moduleId,
+      course_id: payload.courseId,
+      title: payload.title,
+      description: payload.description ?? '',
+      level: payload.level,
+      order_index: payload.order_index,
+      tags: payload.tags ?? [],
+      is_active: payload.is_active ?? false,
+    } as any;
+    const response = await api.post(`/lessons`, body);
+    const raw = response.data as any;
+    const l: any = raw.payload?.lesson || raw.data?.lesson || raw.data || raw.lesson || raw;
+    const mapped: Lesson = {
+      id: l._id || l.id,
+      moduleId: l.module_id || payload.moduleId,
+      name: l.title || payload.title,
+      description: l.description ?? '',
+      order: l.order_index ?? (payload.order_index ?? 0),
+      level: l.level,
+      tags: l.tags,
+      meta: l.meta,
+      status: l.is_active ? 'published' : 'draft',
+      createdAt: l.created_at,
+      updatedAt: l.updated_at,
+    };
+    return { success: !!raw.success || true, data: mapped, message: raw.message } as any;
+  },
+
+  // Delete a lesson (DELETE /api/lessons/:lessonId)
+  deleteLesson: async (lessonId: string): Promise<ApiResponse<void>> => {
+    const response = await api.delete(`/lessons/${lessonId}`);
+    const raw = response.data as any;
+    return { success: !!raw?.success || true, data: undefined as any, message: raw?.message } as any;
+  },
+
+  // Update a lesson (PUT /api/lessons/:lessonId)
+  updateLesson: async (lessonId: string, payload: {
+    moduleId?: string;
+    courseId?: string;
+    title?: string;
+    description?: string;
+    level?: string;
+    order_index?: number;
+    tags?: string[];
+    is_active?: boolean;
+  }): Promise<ApiResponse<Lesson>> => {
+    const body = {
+      module_id: payload.moduleId,
+      course_id: payload.courseId,
+      title: payload.title,
+      description: payload.description,
+      level: payload.level,
+      order_index: payload.order_index,
+      tags: payload.tags,
+      is_active: payload.is_active,
+    } as any;
+    const response = await api.put(`/lessons/${lessonId}`, body);
+    const raw = response.data as any;
+    const l: any = raw.payload?.lesson || raw.data?.lesson || raw.data || raw.lesson || raw;
+    const mapped: Lesson = {
+      id: l._id || l.id || lessonId,
+      moduleId: l.module_id || payload.moduleId || '',
+      name: l.title || payload.title || '',
+      description: l.description ?? payload.description ?? '',
+      order: l.order_index ?? (payload.order_index ?? 0),
+      level: l.level ?? payload.level,
+      tags: l.tags ?? payload.tags,
+      meta: l.meta,
+      status: l.is_active ? 'published' : 'draft',
+      createdAt: l.created_at,
+      updatedAt: l.updated_at,
+    };
+    return { success: !!raw.success || true, data: mapped, message: raw.message } as any;
   }
 };
 
