@@ -75,6 +75,22 @@ export interface ApproveFlashcardsRequest {
   lessonId: string;
 }
 
+export interface CreateModuleRequest {
+  course_id: string;
+  title: string;
+  description: string;
+  order_index: number;
+  is_active: boolean;
+}
+
+export interface UpdateModuleRequest {
+  course_id: string;
+  title: string;
+  description: string;
+  order_index: number;
+  is_active: boolean;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
