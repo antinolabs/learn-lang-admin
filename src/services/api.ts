@@ -8,6 +8,8 @@ import {
   GenerateLessonsRequest,
   GenerateFlashcardsRequest,
   ApproveFlashcardsRequest,
+  CreateModuleRequest,
+  UpdateModuleRequest,
   ApiResponse,
   BackendCourse,
   BackendModule,
@@ -209,6 +211,50 @@ export const moduleApi = {
       updatedAt: m.updated_at,
     }));
     return { success: !!raw.success || true, data: mapped, message: raw.message } as any;
+  },
+
+  // Create a new module
+  createModule: async (data: CreateModuleRequest): Promise<ApiResponse<Module>> => {
+    const response = await api.post('/modules/', data);
+    const raw = response.data as any;
+    const m = raw.data || raw.payload || raw;
+    const mapped: Module = {
+      id: m._id || m.id,
+      courseId: m.course_id,
+      name: m.title,
+      description: m.description,
+      order: m.order_index,
+      status: m.is_active ? 'published' : 'draft',
+      createdAt: m.created_at,
+      updatedAt: m.updated_at,
+    };
+    return { success: !!raw.success || true, data: mapped, message: raw.message };
+  },
+
+  // Update a module
+  updateModule: async (moduleId: string, data: UpdateModuleRequest): Promise<ApiResponse<Module>> => {
+    const response = await api.put(`/modules/${moduleId}`, data);
+    const raw = response.data as any;
+    const m = raw.data || raw.payload || raw;
+    const mapped: Module = {
+      id: m._id || m.id,
+      courseId: m.course_id,
+      name: m.title,
+      description: m.description,
+      order: m.order_index,
+      status: m.is_active ? 'published' : 'draft',
+      createdAt: m.created_at,
+      updatedAt: m.updated_at,
+    };
+    return { success: !!raw.success || true, data: mapped, message: raw.message };
+  },
+
+  // Delete a module
+  deleteModule: async (moduleId: string): Promise<ApiResponse<boolean>> => {
+    const response = await api.delete(`/modules/${moduleId}`);
+    const raw = response.data as any;
+    const success = typeof raw?.success === 'boolean' ? raw.success : true;
+    return { success, data: success, message: raw?.message } as any;
   }
 };
 
