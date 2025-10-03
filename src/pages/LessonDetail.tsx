@@ -265,7 +265,7 @@ const LessonDetail: React.FC = () => {
       // Attempt server update using provided endpoint shape
       const existing = flashcards.find((f) => f.id === id) as any;
       const draftId = existing?.raw?._draft_id || parsed?._draft_id;
-      const apiBase = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+      const apiBase = process.env.REACT_APP_API_BASE_URL ;
       if (draftId) {
         await fetch(`${apiBase}/flashcards/drafts/${draftId}`, {
           method: 'PUT',

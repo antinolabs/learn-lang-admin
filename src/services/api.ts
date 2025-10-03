@@ -16,7 +16,7 @@ import {
   BackendLesson
 } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -463,7 +463,12 @@ export const flashcardApi = {
   // Approve single flashcard
   approveFlashcard: async (payload: { flashcardId: string; draftId: string; lessonId: string }): Promise<ApiResponse<void>> => {
     const { flashcardId, draftId, lessonId } = payload;
-    const response = await api.post('/ai/approve/flash-card', { flashcardId, draftId, lessonId });
+    const response = await api.post('/ai/approve/flash-card', {
+      approvedIds: [flashcardId],
+      rejectedIds: [],
+      draftId,
+      lessonId
+    });
     return response.data;
   },
 
