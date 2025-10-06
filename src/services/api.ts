@@ -59,9 +59,18 @@ export const courseApi = {
   // List all courses (matches: GET /api/course)
   getCourses: async (): Promise<ApiResponse<Course[]>> => {
     const response = await api.get('/course');
+    // The new API response structure groups courses by categories
+    // { success, message, data: [{ category_id, category_name, category_description, courses: [...] }] }
+    const backend = response.data as any;
+    const categories = backend.data || [];
+
+    // Flatten all courses from all categories
+    const allCourses: BackendCourse[] = categories.flatMap((category: any) =>
+      (category.courses || [])
+    );
+
     // Map backend shape to UI Course
-    const backend = response.data as ApiResponse<BackendCourse[]>;
-    const mapped: Course[] = backend.data.map((c) => ({
+    const mapped: Course[] = allCourses.map((c: any) => ({
       id: c._id,
       name: c.title,
       description: c.description,
@@ -70,6 +79,7 @@ export const courseApi = {
       createdAt: c.created_at,
       updatedAt: c.updated_at,
     }));
+
     return { success: backend.success, data: mapped, message: backend.message };
   }
 };
