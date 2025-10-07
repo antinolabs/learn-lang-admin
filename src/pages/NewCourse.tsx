@@ -8,6 +8,7 @@ interface CourseInput {
   level: string;
   language: string;
   is_premium: boolean;
+  iconFile?: File;
 }
 
 const NewCourse: React.FC = () => {
@@ -52,6 +53,27 @@ const NewCourse: React.FC = () => {
     setCourses(next);
   };
 
+  const uploadToS3 = async (presignedUrl: string, file: File): Promise<boolean> => {
+    try {
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`S3 upload failed: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error uploading to S3:', error);
+      throw error;
+    }
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryId) {
@@ -61,8 +83,43 @@ const NewCourse: React.FC = () => {
     try {
       setSubmitting(true);
       setError(null);
-      const res = await courseCreateApi.createCourses({ categoryId, courses });
+
+      // Prepare payload with icon metadata
+      const coursesPayload = courses.map(c => ({
+        title: c.title,
+        description: c.description,
+        level: c.level,
+        language: c.language,
+        is_premium: c.is_premium,
+        icon: c.iconFile ? {
+          fileName: c.iconFile.name,
+          fileType: c.iconFile.type,
+          fileSize: c.iconFile.size
+        } : undefined
+      }));
+
+      const res = await courseCreateApi.createCourses({
+        categoryId,
+        courses: coursesPayload
+      });
+
       if (res.success) {
+        // Upload icons to S3 if presigned URLs are provided
+        const payload = (res as any).payload || [];
+        const uploadPromises = payload.map(async (createdCourse: any, idx: number) => {
+          const courseInput = courses[idx];
+          if (createdCourse.iconUpload && courseInput.iconFile) {
+            try {
+              await uploadToS3(createdCourse.iconUpload.uploadUrl, courseInput.iconFile);
+              console.log(`✅ Icon uploaded for course: ${createdCourse.title}`);
+            } catch (uploadError) {
+              console.error(`❌ Failed to upload icon for course: ${createdCourse.title}`, uploadError);
+              // Continue even if one upload fails
+            }
+          }
+        });
+
+        await Promise.all(uploadPromises);
         navigate('/');
       } else {
         setError(res.message || 'Failed to create courses');
@@ -141,6 +198,36 @@ const NewCourse: React.FC = () => {
                   <option value="no">No</option>
                   <option value="yes">Yes</option>
                 </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Course Icon (optional)</label>
+                <input
+                  type="file"
+                  className="input"
+                  accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Validate file type
+                      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+                      if (!allowedTypes.includes(file.type)) {
+                        alert('Invalid file type. Please use JPG, PNG, WebP, or SVG.');
+                        e.target.value = '';
+                        return;
+                      }
+                      // Validate file size (5MB max)
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert('File size must be less than 5MB');
+                        e.target.value = '';
+                        return;
+                      }
+                      updateCourse(idx, 'iconFile', file);
+                    }
+                  }}
+                />
+                {c.iconFile && (
+                  <p className="text-sm text-gray-600 mt-1">Selected: {c.iconFile.name}</p>
+                )}
               </div>
             </div>
           </div>

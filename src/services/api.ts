@@ -93,6 +93,11 @@ export interface CreateCoursePayload {
     level: string;
     language: string;
     is_premium: boolean;
+    icon?: {
+      fileName: string;
+      fileType: string;
+      fileSize?: number;
+    };
   }>;
 }
 
