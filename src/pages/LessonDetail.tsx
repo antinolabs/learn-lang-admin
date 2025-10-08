@@ -353,7 +353,7 @@ const LessonDetail: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Approved</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {flashcards.filter(f => f.status === 'approved').length}
+                {flashcards.filter(f => (f.raw?.approval_status?.toLowerCase() || f.status) === 'approved').length}
               </p>
             </div>
           </div>
@@ -366,7 +366,7 @@ const LessonDetail: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Pending</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {flashcards.filter(f => f.status === 'pending').length}
+                {flashcards.filter(f => (f.raw?.approval_status?.toLowerCase() || f.status) === 'pending').length}
               </p>
             </div>
           </div>
@@ -379,7 +379,7 @@ const LessonDetail: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Rejected</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {flashcards.filter(f => f.status === 'rejected').length}
+                {flashcards.filter(f => (f.raw?.approval_status?.toLowerCase() || f.status) === 'rejected').length}
               </p>
             </div>
           </div>
@@ -570,13 +570,13 @@ const LessonDetail: React.FC = () => {
 
                     <div className="flex items-center gap-4 mt-3">
                       <span className={`badge ${
-                        flashcard.status === 'approved' ? 'badge-success' : 
-                        flashcard.status === 'pending' ? 'badge-warning' : 'badge-danger'
+                        (flashcard.raw?.approval_status?.toLowerCase() || flashcard.status) === 'approved' ? 'badge-success' :
+                        (flashcard.raw?.approval_status?.toLowerCase() || flashcard.status) === 'pending' ? 'badge-warning' : 'badge-danger'
                       }`}>
-                        {flashcard.status}
+                        {flashcard.raw?.approval_status?.toLowerCase() || flashcard.status}
                       </span>
                       <span className={`badge ${
-                        flashcard.difficulty === 'easy' ? 'badge-success' : 
+                        flashcard.difficulty === 'easy' ? 'badge-success' :
                         flashcard.difficulty === 'medium' ? 'badge-warning' : 'badge-danger'
                       }`}>
                         {flashcard.difficulty}
