@@ -583,7 +583,7 @@ const LessonDetail: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  {previewingFlashcards && flashcard.status === 'pending' && (
+                  {previewingFlashcards && flashcard.status === 'pending' && (flashcard.raw?.approval_status?.toLowerCase() || flashcard.status) !== 'approved' && (
                     <div className="flex flex-col items-end gap-10 ml-4">
                       <div className="flex items-center gap-2">
                         <button
