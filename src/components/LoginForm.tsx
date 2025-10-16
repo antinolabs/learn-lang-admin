@@ -1,4 +1,3 @@
-// src/components/LoginForm.tsx
 import React, { useState, FormEvent, ChangeEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -47,36 +46,49 @@ const LoginForm: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gray-100">
-            <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md">
-                <h2 className="text-3xl font-bold text-center mb-6 border-b pb-2">Login</h2>
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <input
-                        type="email"
-                        placeholder="Email ID"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={email}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={password}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                        required
-                    />
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700 transition"
-                    >
-                        Login
-                    </button>
-                    {error && <p className="text-red-600 bg-red-100 px-4 py-2 rounded text-sm text-center">{error}</p>}
-                </form>
+
+        <div className="flex min-h-screen w-full overflow-hidden">
+            {/* Left: Image */}
+            <div className="w-2/5 hidden md:block h-screen">
+                <img
+                    src="/login.png"
+                    alt="Login visual"
+                    className="w-full h-full object-cover"
+                    style={{ border: 'none', display: 'block' }}
+                />
+            </div>
+
+            {/* Right: Login Form */}
+            <div className="w-full md:w-3/5 flex flex-col justify-center items-center bg-gray-50 px-4 min-h-screen">
+                <div className="max-w-md w-full">
+                    <h1 className="text-4xl font-bold text-center mb-2">Welcome Back</h1>
+                    <p className="text-center text-gray-600 mb-6">Login to Learning App</p>
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <input
+                            type="email"
+                            placeholder="Email ID"
+                            className="login-input"
+                            value={email}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                            required
+                        />
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            className="login-input"
+                            value={password}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                            required
+                        />
+                        <button type="submit" className="login-button">
+                            Login
+                        </button>
+                        {error && <p className="login-error">{error}</p>}
+                    </form>
+                </div>
             </div>
         </div>
+
     );
 };
 
