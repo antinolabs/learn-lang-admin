@@ -69,19 +69,15 @@
 /* loginForm CSS */
 
 @layer components {
-  .login-card {
-    @apply w-full max-w-sm bg-white border border-gray-300 rounded-lg shadow-md p-8;
-  }
-
   .login-input {
-    @apply w-full px-4 py-2 border border-black rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500;
+    @apply w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500;
   }
 
   .login-button {
-    @apply w-full mt-2 bg-blue-800 text-white py-2 rounded font-semibold hover:bg-blue-900 transition duration-200;
+    @apply w-full bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700 transition;
   }
 
   .login-error {
-    @apply text-red-600 text-sm mt-2 text-center;
+    @apply text-red-600 bg-red-100 px-4 py-2 rounded text-sm text-center;
   }
 }
