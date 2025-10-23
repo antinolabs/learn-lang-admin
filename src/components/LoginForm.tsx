@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, ChangeEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +11,7 @@ const LoginForm: React.FC = () => {
     const navigate = useNavigate();
     const { user, login } = useAuth();
 
+    // Redirect to dashboard if already logged in as admin
     useEffect(() => {
         if (user?.role === 'admin') {
             navigate('/');
@@ -30,6 +32,7 @@ const LoginForm: React.FC = () => {
             const { user: loggedInUser, accessToken } = data;
 
             if (loggedInUser.role === 'admin') {
+                // This login call now also saves user & token to localStorage via AuthContext
                 login(loggedInUser, accessToken);
                 navigate('/');
             } else {
@@ -46,7 +49,6 @@ const LoginForm: React.FC = () => {
     };
 
     return (
-
         <div className="flex min-h-screen w-full overflow-hidden">
             {/* Left: Image */}
             <div className="w-2/5 hidden md:block h-screen">
@@ -88,7 +90,6 @@ const LoginForm: React.FC = () => {
                 </div>
             </div>
         </div>
-
     );
 };
 

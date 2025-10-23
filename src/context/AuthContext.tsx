@@ -1,4 +1,5 @@
 // src/context/AuthContext.tsx
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface User {
@@ -18,19 +19,24 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
+    // NO persistence here
+    const [user, setUser] = useState<User | null>(localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') as string) : null);
+    const [token, setToken] = useState<string | null>(localStorage.getItem('token') || null);
 
     const login = (user: User, token: string) => {
+        localStorage.setItem('user', JSON.stringify(user)); // Save user to localStorage
+        localStorage.setItem('token', token);
         setUser(user);
         setToken(token);
-        localStorage.setItem('token', token);
+        // NO localStorage set here
     };
 
     const logout = () => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
         setUser(null);
         setToken(null);
-        localStorage.removeItem('token');
+        // NO localStorage remove here
     };
 
     return (
