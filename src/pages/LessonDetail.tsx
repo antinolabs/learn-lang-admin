@@ -8,6 +8,7 @@ import {
   Clock,
   Check,
   X,
+  AlertTriangle,
   Copy,
   ExternalLink
 } from 'lucide-react';
@@ -208,11 +209,32 @@ const LessonDetail: React.FC = () => {
     }
   };
 
-  const handleRejectFlashcard = (flashcardId: string) => {
-    setFlashcards(prev => prev.map(f => 
-      f.id === flashcardId ? { ...f, status: 'rejected' as const } : f
-    ));
-  };
+  // const handleRejectFlashcard = (flashcardId: string) => {
+  //   setFlashcards(prev => prev.map(f => 
+  //     f.id === flashcardId ? { ...f, status: 'rejected' as const } : f
+  //   ));
+  // };
+
+const handleRejectFlashcard = (flashcardId: string) => {
+  if (!flashcardId) {
+    console.error('Missing flashcardId for reject');
+    return;
+  }
+
+  flashcardApi.rejectFlashcard({ flashcardId })
+    .then((response) => {
+      if (response.success) {
+        // Update local state
+        setFlashcards(prev => prev.map(f => 
+          f.id === flashcardId ? { ...f, status: 'rejected' as const } : f
+        ));
+      }
+    })
+    .catch((err) => {
+      console.error('Error rejecting flashcard:', err);
+    });
+};
+
 
   const handleApproveFlashcard = (flashcardId: string, draftId?: string, lessonId?: string) => {
     if (!flashcardId || !draftId || !lessonId) {
@@ -231,7 +253,7 @@ const LessonDetail: React.FC = () => {
         console.error('Error approving flashcard:', err);
       });
   };
-
+  
   // Inline JSON form handlers
   const handleOpenEdit = (id: string, raw: any) => {
     setEditModeById((m) => ({ ...m, [id]: true }));
@@ -583,7 +605,20 @@ const LessonDetail: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  {previewingFlashcards && flashcard.status === 'pending' && (flashcard.raw?.approval_status?.toLowerCase() || flashcard.status) !== 'approved' && (
+                  {previewingFlashcards && (flashcard.raw?.approval_status?.toLowerCase()) === 'approved' && (
+                    <div className="flex flex-col items-end gap-10 ml-4">
+                      <div className="flex items-center gap-2">
+                         <button 
+                          onClick={() => handleRejectFlashcard(flashcard.id)}
+                          className="btn btn-danger btn-sm flex items-center gap-1"
+                        >
+                          <X className="h-4 w-4" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {previewingFlashcards && flashcard.status === 'pending' && (flashcard.raw?.approval_status?.toLowerCase()) === 'pending' && (
                     <div className="flex flex-col items-end gap-10 ml-4">
                       <div className="flex items-center gap-2">
                         <button
@@ -594,11 +629,11 @@ const LessonDetail: React.FC = () => {
                           Approve
                         </button>
                         <button
-                          onClick={() => handleRejectFlashcard(flashcard.id)}
-                          className="btn btn-danger btn-sm flex items-center gap-1"
+                          // onClick={() => handleRejectFlashcard(flashcard.id)}
+                          className="btn btn-warning btn-sm flex items-center gap-1"
                         >
-                          <X className="h-4 w-4" />
-                          Reject
+                          <AlertTriangle className="h-4 w-4" />
+                          Decline
                         </button>
                       </div>
                       <div className="flex items-center gap-4">

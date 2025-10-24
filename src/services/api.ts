@@ -487,6 +487,14 @@ export const flashcardApi = {
     return response.data;
   },
 
+  // Reject single flashcard
+  rejectFlashcard: async (payload: { flashcardId: string }): Promise<ApiResponse<void>> => {
+    const { flashcardId } = payload;
+    const response = await api.delete(`/flashcards/reject/${flashcardId}`);
+    return response.data;
+  },
+
+
   // Upload media for a specific flashcard in a draft
   uploadFlashcardMedia: async (
     draftId: string,
