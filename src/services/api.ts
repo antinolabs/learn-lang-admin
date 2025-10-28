@@ -29,6 +29,18 @@ const api = axios.create({
 
 });
 
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+
 // Course API
 export const courseApi = {
   // Generate modules for a course (matches: POST /api/course/:courseId/generate-modules)
@@ -560,5 +572,53 @@ export const categoriesApi = {
     };
   }
 };
+
+export const helpCenterApi = {
+  getStatistics: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get("/help-center/admin/statistics");
+    const raw = response.data;
+
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || [],
+      message: raw.message,
+    };
+  },
+
+  getAllQueries: async (page = 1): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/help-center/admin/queries?page=${page}`);
+    const raw = response.data;
+
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || {},
+      message: raw.message,
+    };
+  },
+
+  updateQueryStatus: async (
+    queryId: string,
+    status: string,
+    admin_response: string
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.put(
+      `/help-center/admin/query/${queryId}/status`,
+      {
+        status,
+        admin_response,
+      }
+    );
+
+    const raw = response.data;
+
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || {},
+      message: raw.message,
+    };
+  },
+};
+
+
 
 export default api;
