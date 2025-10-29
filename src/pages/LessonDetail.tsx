@@ -173,7 +173,6 @@ const LessonDetail: React.FC = () => {
       console.log("response",response)
 
       if (response.success) {
-        console.log("response",response)
         setFlashcards(response.data);
         setPreviewingFlashcards(true);
         // Extract bufferId from response if available
@@ -209,11 +208,39 @@ const LessonDetail: React.FC = () => {
     }
   };
 
-  // const handleRejectFlashcard = (flashcardId: string) => {
-  //   setFlashcards(prev => prev.map(f => 
-  //     f.id === flashcardId ? { ...f, status: 'rejected' as const } : f
-  //   ));
-  // };
+const handleDeclineFlashcard = (flashcardId: string, draftId?: string, lessonId?: string) => {
+  if (!flashcardId || !draftId || !lessonId) {
+    console.error('Missing identifiers for decline:', { flashcardId, draftId, lessonId });
+    return;
+  }
+
+  flashcardApi.declineFlashcard({
+    draftId,
+    rejectedIds: [flashcardId],
+    lessonId,
+  })
+    .then((response) => {
+      if (response.success) {
+        setFlashcards(prev =>
+          prev.map(f =>
+            f.id === flashcardId
+              ? {
+                  ...f,
+                  status: 'rejected' as const,
+                  raw: {
+                    ...f.raw,
+                    approval_status: 'declined',
+                  },
+                }
+              : f
+          )
+        );
+      }
+    })
+    .catch((err) => {
+      console.error('Error declining flashcard:', err);
+    });
+};
 
 const handleRejectFlashcard = (flashcardId: string) => {
   if (!flashcardId) {
@@ -225,16 +252,26 @@ const handleRejectFlashcard = (flashcardId: string) => {
     .then((response) => {
       if (response.success) {
         // Update local state
-        setFlashcards(prev => prev.map(f => 
-          f.id === flashcardId ? { ...f, status: 'rejected' as const } : f
-        ));
+        setFlashcards(prev =>
+          prev.map(f =>
+            f.id === flashcardId
+              ? {
+                  ...f,
+                  status: 'rejected' as const,
+                  raw: {
+                    ...f.raw,
+                    approval_status: 'rejected',
+                  },
+                }
+              : f
+          )
+        );
       }
     })
     .catch((err) => {
       console.error('Error rejecting flashcard:', err);
     });
 };
-
 
   const handleApproveFlashcard = (flashcardId: string, draftId?: string, lessonId?: string) => {
     if (!flashcardId || !draftId || !lessonId) {
@@ -244,9 +281,20 @@ const handleRejectFlashcard = (flashcardId: string) => {
     flashcardApi.approveFlashcard({ flashcardId, draftId, lessonId })
       .then((response) => {
         if (response.success) {
-          setFlashcards(prev => prev.map(f => 
-            f.id === flashcardId ? { ...f, status: 'approved' as const } : f
-          ));
+          setFlashcards(prev =>
+            prev.map(f =>
+              f.id === flashcardId
+                ? {
+                    ...f,
+                    status: 'approved' as const,
+                    raw: {
+                      ...f.raw,
+                      approval_status: 'approved',
+                    },
+                  }
+                : f
+            )
+          );
         }
       })
       .catch((err) => {
@@ -629,7 +677,7 @@ const handleRejectFlashcard = (flashcardId: string) => {
                           Approve
                         </button>
                         <button
-                          // onClick={() => handleRejectFlashcard(flashcard.id)}
+                          onClick={() => handleDeclineFlashcard((flashcard as any).raw?._id || flashcard.id, (flashcard as any).raw?._draft_id, flashcard.lessonId || (flashcard as any).raw?._lesson_id || (flashcard as any).raw?.lesson_id)}
                           className="btn btn-warning btn-sm flex items-center gap-1"
                         >
                           <AlertTriangle className="h-4 w-4" />

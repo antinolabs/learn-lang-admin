@@ -506,6 +506,11 @@ export const flashcardApi = {
     return response.data;
   },
 
+  declineFlashcard: async (payload: { draftId: string; rejectedIds: string[]; lessonId: string }): Promise<ApiResponse<void>> => {
+    const response = await api.post(`/ai/decline/flash-card`, payload);
+    return response.data;
+  },
+
 
   // Upload media for a specific flashcard in a draft
   uploadFlashcardMedia: async (
