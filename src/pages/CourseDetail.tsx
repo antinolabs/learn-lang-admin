@@ -9,7 +9,8 @@ import {
   Clock,
   X,
   Edit,
-  Trash2
+  Trash2,
+  ArrowLeft
 } from 'lucide-react';
 import { courseApi, moduleApi } from '../services/api';
 import { Course, Module, CreateModuleRequest, UpdateModuleRequest } from '../types';
