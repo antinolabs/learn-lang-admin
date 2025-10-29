@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
   Home, 
@@ -8,7 +8,8 @@ import {
   BarChart3,
   Menu,
   X,
-  Mails
+  Mails,
+  ArrowLeft
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,6 +20,8 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
@@ -35,6 +38,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
     return location.pathname.startsWith(href);
   };
+
+  const isDashboard = location.pathname === "/";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,7 +119,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex flex-1"></div>
+            <div className="flex flex-1">
+              {!isDashboard && (
+                <>
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center text-gray-600 hover:text-gray-800"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Back
+                  </button>
+                </>
+                )}
+
+            </div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <Link to="/courses/new" className="btn btn-primary">New Course</Link>
             </div>
