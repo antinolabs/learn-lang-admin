@@ -50,7 +50,7 @@ export interface Flashcard {
   front: string;
   back: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'declined';
   bufferId?: string;
   createdAt: string;
   updatedAt: string;
