@@ -110,6 +110,11 @@ export interface CreateCoursePayload {
       fileType: string;
       fileSize?: number;
     };
+    course_char?: {
+      fileName: string;
+      fileType: string;
+      fileSize?: number;
+    };
   }>;
 }
 

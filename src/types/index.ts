@@ -6,6 +6,8 @@ export interface Course {
   status: 'draft' | 'published' | 'archived';
   createdAt: string;
   updatedAt: string;
+  icon_url?: string;
+  course_char_url?: string;
 }
 
 // Raw course type as returned by backend GET /api/course
@@ -17,6 +19,8 @@ export interface BackendCourse {
   status: string;
   created_at: string;
   updated_at: string;
+  icon_url?: string;
+  course_char_url?: string;
 }
 
 export interface Module {

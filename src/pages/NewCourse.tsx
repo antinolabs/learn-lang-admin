@@ -9,6 +9,7 @@ interface CourseInput {
   language: string;
   is_premium: boolean;
   iconFile?: File;
+  courseCharFile?: File;
 }
 
 const NewCourse: React.FC = () => {
@@ -84,7 +85,7 @@ const NewCourse: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      // Prepare payload with icon metadata
+      // Prepare payload with icon and course_char metadata
       const coursesPayload = courses.map(c => ({
         title: c.title,
         description: c.description,
@@ -95,6 +96,11 @@ const NewCourse: React.FC = () => {
           fileName: c.iconFile.name,
           fileType: c.iconFile.type,
           fileSize: c.iconFile.size
+        } : undefined,
+        course_char: c.courseCharFile ? {
+          fileName: c.courseCharFile.name,
+          fileType: c.courseCharFile.type,
+          fileSize: c.courseCharFile.size
         } : undefined
       }));
 
@@ -104,16 +110,29 @@ const NewCourse: React.FC = () => {
       });
 
       if (res.success) {
-        // Upload icons to S3 if presigned URLs are provided
+        // Upload icons and course_char to S3 if presigned URLs are provided
         const payload = (res as any).payload || [];
         const uploadPromises = payload.map(async (createdCourse: any, idx: number) => {
           const courseInput = courses[idx];
+
+          // Upload icon
           if (createdCourse.iconUpload && courseInput.iconFile) {
             try {
               await uploadToS3(createdCourse.iconUpload.uploadUrl, courseInput.iconFile);
               console.log(`✅ Icon uploaded for course: ${createdCourse.title}`);
             } catch (uploadError) {
               console.error(`❌ Failed to upload icon for course: ${createdCourse.title}`, uploadError);
+              // Continue even if one upload fails
+            }
+          }
+
+          // Upload course_char
+          if (createdCourse.courseCharUpload && courseInput.courseCharFile) {
+            try {
+              await uploadToS3(createdCourse.courseCharUpload.uploadUrl, courseInput.courseCharFile);
+              console.log(`✅ Course character uploaded for course: ${createdCourse.title}`);
+            } catch (uploadError) {
+              console.error(`❌ Failed to upload course character for course: ${createdCourse.title}`, uploadError);
               // Continue even if one upload fails
             }
           }
@@ -227,6 +246,36 @@ const NewCourse: React.FC = () => {
                 />
                 {c.iconFile && (
                   <p className="text-sm text-gray-600 mt-1">Selected: {c.iconFile.name}</p>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Course Character (optional)</label>
+                <input
+                  type="file"
+                  className="input"
+                  accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Validate file type
+                      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+                      if (!allowedTypes.includes(file.type)) {
+                        alert('Invalid file type. Please use JPG, PNG, WebP, or SVG.');
+                        e.target.value = '';
+                        return;
+                      }
+                      // Validate file size (5MB max)
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert('File size must be less than 5MB');
+                        e.target.value = '';
+                        return;
+                      }
+                      updateCourse(idx, 'courseCharFile', file);
+                    }
+                  }}
+                />
+                {c.courseCharFile && (
+                  <p className="text-sm text-gray-600 mt-1">Selected: {c.courseCharFile.name}</p>
                 )}
               </div>
             </div>
