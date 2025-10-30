@@ -9,7 +9,8 @@ import {
   Menu,
   X,
   Mails,
-  ArrowLeft
+  ArrowLeft,
+  Flag
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,6 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Users', href: '/users', icon: Users },
     { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'Flags', href: '/flags', icon: Flag },
     { name: 'Help Center', href: '/help-center', icon: Mails },
   ];
 

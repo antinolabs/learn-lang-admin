@@ -12,6 +12,7 @@ import LoginForm from './components/LoginForm';
 
 import { useAuth } from './context/AuthContext';
 import HelpCenter from './pages/HelpCenter';
+import Flags from './pages/Flags';
 
 function App() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ function App() {
         <Route path="/lesson/:lessonId" element={user ? <Layout><LessonDetail /></Layout> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
         <Route path="/help-center" element={user ? <Layout><HelpCenter /></Layout> : <Navigate to="/login" replace />} />
-
+        <Route path="/flags" element={user ? <Layout><Flags /></Layout> : <Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );
