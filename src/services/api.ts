@@ -629,6 +629,53 @@ export const helpCenterApi = {
   },
 };
 
+export const flagsApi = {
+  // Get all admin flags
+  getAllFlags: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get("/flags/admin/all");
+    const raw = response.data;
 
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || [],
+      message: raw.message,
+    };
+  },
+
+  // Get statistics of flags
+  getStatistics: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get("/flags/admin/statistics");
+    const raw = response.data;
+
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || {},
+      message: raw.message,
+    };
+  },
+
+  // Update flag status
+  updateFlagStatus: async (
+    flagId: string,
+    status: string,
+    admin_notes: string
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.put(
+      `/flags/admin/${flagId}/status`,
+      {
+        status,
+        admin_notes,
+      }
+    );
+
+    const raw = response.data;
+
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || {},
+      message: raw.message,
+    };
+  },
+};
 
 export default api;
