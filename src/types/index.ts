@@ -8,6 +8,8 @@ export interface Course {
   updatedAt: string;
   icon_url?: string;
   course_char_url?: string;
+  category_id: string;
+  category_name: string;
 }
 
 // Raw course type as returned by backend GET /api/course

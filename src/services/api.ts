@@ -75,10 +75,14 @@ export const courseApi = {
     // { success, message, data: [{ category_id, category_name, category_description, courses: [...] }] }
     const backend = response.data as any;
     const categories = backend.data || [];
-
     // Flatten all courses from all categories
+    
     const allCourses: BackendCourse[] = categories.flatMap((category: any) =>
-      (category.courses || [])
+      (category.courses || []).map((course: any) => ({
+        ...course,
+        category_id: category.category_id,
+        category_name: category.category_name,
+      }))
     );
 
     // Map backend shape to UI Course
@@ -87,7 +91,11 @@ export const courseApi = {
       name: c.title,
       description: c.description,
       level: c.level || 'basic',
+      course_char_url: c.course_char_url || "",
+      icon_url: c.icon_url || "",
       status: (c.status as any) || 'draft',
+      category_id: c.category_id,
+      category_name: c.category_name,
       createdAt: c.created_at,
       updatedAt: c.updated_at,
     }));
@@ -122,8 +130,14 @@ export const courseCreateApi = {
   createCourses: async (payload: CreateCoursePayload): Promise<ApiResponse<Course[]>> => {
     const response = await api.post('/course', payload);
     return response.data;
-  }
+  },
+
+  updateCourse: async (id: string, payload: any): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/course/${id}`, payload);
+    return {success: response.data.success, data: response.data.payload, message: response.data.message };
+  },
 };
+
 
 // Module API
 export const moduleApi = {

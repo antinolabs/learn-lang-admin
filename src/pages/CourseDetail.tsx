@@ -68,6 +68,8 @@ const CourseDetail: React.FC = () => {
             description: 'Details unavailable from API. You can still generate modules.',
             level: 'basic',
             status: 'draft',
+            category_id: 'course category id',
+            category_name: 'course category name',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
@@ -80,6 +82,8 @@ const CourseDetail: React.FC = () => {
           description: 'Details unavailable from API. You can still generate modules.',
           level: 'basic',
           status: 'draft',
+          category_id: 'course category id',
+          category_name: 'course category name',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
