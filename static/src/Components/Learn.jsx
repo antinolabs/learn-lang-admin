@@ -1,6 +1,6 @@
 const Learn = () => {
     return (
-        <section className='mt-20 px-8 sm:px-16'>
+        <section className='mt-12 px-8 sm:px-16'>
             <h4 className='text-violet-800 font-bold text-center text-3xl'>Lot to Reasons to learn with us</h4>
             <p className='text-center mt-3 text-xs'>Discover smarter, faster, and more fun ways to reach your learning goals.</p>
             {/* Feature 1 */}
