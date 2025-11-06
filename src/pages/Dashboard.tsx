@@ -99,10 +99,6 @@ const Dashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-2 text-gray-600">Manage your language learning courses</p>
         </div>
-        <button className="btn btn-primary flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          New Course
-        </button>
       </div>
 
       {/* Stats */}
