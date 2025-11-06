@@ -117,10 +117,6 @@ const Dashboard: React.FC = () => {
             Manage your language learning courses
           </p>
         </div>
-        <button className="btn btn-primary flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          New Course
-        </button>
       </div>
 
       {/* Stats */}
