@@ -49,11 +49,11 @@ export const courseApi = {
     // backend returns { success, payload: { modules: BackendModule[] } }
     const raw = response.data as any;
     const backendModules: BackendModule[] = raw.payload?.modules || [];
-    const mapped: Module[] = backendModules.map((m: any) => ({
+    const mapped: Module[] = backendModules.map((m) => ({
       id: m._id,
       courseId: m.course_id,
-      name: m.content_data?.title || m.title || '',
-      description: m.content_data?.description || m.description || '',
+      name: m.title,
+      description: m.description,
       order: m.order_index,
       status: m.is_active ? 'published' : 'draft',
       createdAt: m.created_at,
@@ -88,11 +88,11 @@ export const courseApi = {
     // Map backend shape to UI Course
     const mapped: Course[] = allCourses.map((c: any) => ({
       id: c._id,
-      name: c.content_data?.title || c.title || '',
-      description: c.content_data?.description || c.description || '',
+      name: c.title,
+      description: c.description,
       level: c.level || 'basic',
-      course_char_url: c.content_data?.course_char_url || c.course_char_url || "",
-      icon_url: c.content_data?.icon_url || c.icon_url || "",
+      course_char_url: c.course_char_url || "",
+      icon_url: c.icon_url || "",
       status: (c.status as any) || 'draft',
       category_id: c.category_id,
       category_name: c.category_name,
@@ -153,8 +153,8 @@ export const moduleApi = {
     const mapped: Module[] = (modulesArray || []).map((m: any) => ({
       id: m._id,
       courseId: typeof m.course_id === 'string' ? m.course_id : (m.course_id?._id || ''),
-      name: m.content_data?.title || m.title || '',
-      description: m.content_data?.description || m.description || '',
+      name: m.title,
+      description: m.description,
       order: m.order_index,
       status: m.is_active ? 'published' : 'draft',
       createdAt: m.created_at,
@@ -168,15 +168,15 @@ export const moduleApi = {
     // backend returns { success, payload: { lessons: BackendLesson[] } }
     const raw = response.data as any;
     const backendLessons: BackendLesson[] = raw.payload?.lessons || [];
-    const mapped: Lesson[] = backendLessons.map((l: any) => ({
+    const mapped: Lesson[] = backendLessons.map((l) => ({
       id: l._id,
       moduleId: l.module_id,
-      name: l.content_data?.title || l.title || '',
-      description: l.content_data?.description || l.description || '',
+      name: l.title,
+      description: l.description,
       order: l.order_index,
       level: l.level,
       tags: l.tags,
-      meta: l.content_data?.meta || l.meta,
+      meta: l.meta,
       status: l.is_active ? 'published' : 'draft',
       createdAt: l.created_at,
       updatedAt: l.updated_at,
@@ -193,8 +193,8 @@ export const moduleApi = {
       const mapped: Module = {
         id: m._id || m.id || moduleId,
         courseId: typeof m.course_id === 'string' ? m.course_id : (m.course_id?._id || ''),
-        name: m.content_data?.title || m.title || m.name || '',
-        description: m.content_data?.description || m.description || '',
+        name: m.title || m.name || '',
+        description: m.description || '',
         order: m.order_index ?? m.order ?? 0,
         status: m.is_active ? 'published' : 'draft',
         createdAt: m.created_at,
@@ -218,8 +218,8 @@ export const moduleApi = {
         const mapped: Module = {
           id: found._id,
           courseId: typeof found.course_id === 'string' ? found.course_id : ((found as any).course_id?._id || ''),
-          name: (found as any).content_data?.title || found.title || '',
-          description: (found as any).content_data?.description || found.description || '',
+          name: found.title,
+          description: found.description,
           order: found.order_index,
           status: found.is_active ? 'published' : 'draft',
           createdAt: found.created_at,
@@ -249,8 +249,8 @@ export const moduleApi = {
     const mapped: Module[] = (list || []).map((m: any) => ({
       id: m._id || m.id,
       courseId: typeof m.course_id === 'string' ? m.course_id : (m.course_id?._id || ''),
-      name: m.content_data?.title || m.title || m.name || '',
-      description: m.content_data?.description || m.description || '',
+      name: m.title || m.name,
+      description: m.description,
       order: m.order_index ?? m.order ?? 0,
       status: m.is_active ? 'published' : 'draft',
       createdAt: m.created_at,
@@ -267,8 +267,8 @@ export const moduleApi = {
     const mapped: Module = {
       id: m._id || m.id,
       courseId: m.course_id,
-      name: m.content_data?.title || m.title || '',
-      description: m.content_data?.description || m.description || '',
+      name: m.title,
+      description: m.description,
       order: m.order_index,
       status: m.is_active ? 'published' : 'draft',
       createdAt: m.created_at,
@@ -285,8 +285,8 @@ export const moduleApi = {
     const mapped: Module = {
       id: m._id || m.id,
       courseId: m.course_id,
-      name: m.content_data?.title || m.title || '',
-      description: m.content_data?.description || m.description || '',
+      name: m.title,
+      description: m.description,
       order: m.order_index,
       status: m.is_active ? 'published' : 'draft',
       createdAt: m.created_at,
@@ -327,12 +327,12 @@ export const lessonApi = {
     const mapped: Lesson[] = (list || []).map((l: any) => ({
       id: l._id,
       moduleId: l.module_id,
-      name: l.content_data?.title || l.title || '',
-      description: l.content_data?.description || l.description || '',
+      name: l.title,
+      description: l.description,
       order: l.order_index,
       level: l.level,
       tags: l.tags,
-      meta: l.content_data?.meta || l.meta,
+      meta: l.meta,
       status: l.is_active ? 'published' : 'draft',
       createdAt: l.created_at,
       updatedAt: l.updated_at,
@@ -367,12 +367,12 @@ export const lessonApi = {
     const mapped: Lesson = {
       id: l._id || l.id,
       moduleId: l.module_id || payload.moduleId,
-      name: l.content_data?.title || l.title || payload.title || '',
-      description: l.content_data?.description || l.description || '',
+      name: l.title || payload.title,
+      description: l.description ?? '',
       order: l.order_index ?? (payload.order_index ?? 0),
       level: l.level,
       tags: l.tags,
-      meta: l.content_data?.meta || l.meta,
+      meta: l.meta,
       status: l.is_active ? 'published' : 'draft',
       createdAt: l.created_at,
       updatedAt: l.updated_at,
@@ -414,12 +414,12 @@ export const lessonApi = {
     const mapped: Lesson = {
       id: l._id || l.id || lessonId,
       moduleId: l.module_id || payload.moduleId || '',
-      name: l.content_data?.title || l.title || payload.title || '',
-      description: l.content_data?.description || l.description || payload.description || '',
+      name: l.title || payload.title || '',
+      description: l.description ?? payload.description ?? '',
       order: l.order_index ?? (payload.order_index ?? 0),
       level: l.level ?? payload.level,
       tags: l.tags ?? payload.tags,
-      meta: l.content_data?.meta || l.meta,
+      meta: l.meta,
       status: l.is_active ? 'published' : 'draft',
       createdAt: l.created_at,
       updatedAt: l.updated_at,
