@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { categoriesApi, courseCreateApi, Category } from "../services/api";
 import { Course } from "../types";
@@ -44,11 +44,7 @@ const EditCourseModal: React.FC<EditCourseModalProps> = ({
     }
   }, [courseData]);
 
-  useEffect(() => {
-    handleCategoryFocus();
-  }, []);
-
-  const handleCategoryFocus = async () => {
+  const handleCategoryFocus = useCallback(async () => {
     if (loadingCategories || categories.length > 0) return;
     try {
       setLoadingCategories(true);
@@ -59,7 +55,11 @@ const EditCourseModal: React.FC<EditCourseModalProps> = ({
     } finally {
       setLoadingCategories(false);
     }
-  };
+  }, [loadingCategories, categories.length]);
+
+  useEffect(() => {
+    handleCategoryFocus();
+  }, [handleCategoryFocus]);
 
   const handleFileChange = (
     file: File,

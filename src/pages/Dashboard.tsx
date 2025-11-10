@@ -4,7 +4,6 @@ import {
   BookOpen,
   CheckCircle,
   Clock,
-  Plus,
   ArrowRight,
   Edit,
 } from "lucide-react";
