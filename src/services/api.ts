@@ -692,4 +692,17 @@ export const flagsApi = {
   },
 };
 
+// User-Course API
+export const userCourseApi = {
+  getUsersCourses: async (params?: { page?: number; limit?: number; search?: string }): Promise<ApiResponse<any>> => {
+    const response = await api.get('/user-course/admin/users-courses', { params });
+    const raw = response.data;
+    return {
+      success: raw.success,
+      data: raw.payload || raw.data || {},
+      message: raw.message,
+    };
+  },
+};
+
 export default api;

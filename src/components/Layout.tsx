@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
   Home, 
-  Settings, 
   Users, 
   BarChart3,
   Menu,
@@ -29,7 +28,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Modules', href: '/modules', icon: BookOpen },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Users', href: '/users', icon: Users },
-    { name: 'Settings', href: '/settings', icon: Settings },
     { name: 'Flags', href: '/flags', icon: Flag },
     { name: 'Help Center', href: '/help-center', icon: Mails },
   ];

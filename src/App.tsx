@@ -13,6 +13,8 @@ import LoginForm from './components/LoginForm';
 import { useAuth } from './context/AuthContext';
 import HelpCenter from './pages/HelpCenter';
 import Flags from './pages/Flags';
+import Users from './pages/Users';
+import Analytics from './pages/Analytics';
 
 function App() {
   const { user } = useAuth();
@@ -27,9 +29,11 @@ function App() {
         <Route path="/course/:courseId" element={user ? <Layout><CourseDetail /></Layout> : <Navigate to="/login" replace />} />
         <Route path="/module/:moduleId" element={user ? <Layout><ModuleDetail /></Layout> : <Navigate to="/login" replace />} />
         <Route path="/lesson/:lessonId" element={user ? <Layout><LessonDetail /></Layout> : <Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+        <Route path="/users" element={user ? <Layout><Users /></Layout> : <Navigate to="/login" replace />} />
+        <Route path="/analytics" element={user ? <Layout><Analytics /></Layout> : <Navigate to="/login" replace />} />
         <Route path="/help-center" element={user ? <Layout><HelpCenter /></Layout> : <Navigate to="/login" replace />} />
         <Route path="/flags" element={user ? <Layout><Flags /></Layout> : <Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
       </Routes>
     </Router>
   );

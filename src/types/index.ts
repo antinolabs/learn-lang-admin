@@ -97,6 +97,27 @@ export interface UpdateModuleRequest {
   is_active: boolean;
 }
 
+// User-Course types
+export interface UserCourse {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  course_id: string;
+  course_title: string;
+  progress: number;
+  status: string;
+  enrolled_at: string;
+  last_accessed_at: string;
+}
+
+export interface UserCourseResponse {
+  users: UserCourse[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
